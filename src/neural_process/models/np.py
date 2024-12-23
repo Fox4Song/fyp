@@ -3,9 +3,9 @@ from functools import partial
 import torch
 import torch.nn as nn
 
-from neural_process.architectures.mlp import MLP
+from modules import MLP
 
-from .base import NeuralProcessFamily
+from .base import NeuralProcessFamily, LatentNeuralProcessFamily
 
 
 class CNP(NeuralProcessFamily):
@@ -63,11 +63,6 @@ class CNP(NeuralProcessFamily):
 
         return R
 
-    def encode_latent(self, *args):
-
-        # Deterministic model, no latent variable
-        return None, None, None
-
     def encode_target_representation(self, x_context, z, R, x_target):
 
         _, n_target, _ = x_target.shape
@@ -79,5 +74,42 @@ class CNP(NeuralProcessFamily):
         # n_z = 1
         # [1, batch_size, n_target, r_dim]
         R_target = R_target.unsqueeze(0)
+
+        return R_target
+
+
+class LNP(LatentNeuralProcessFamily, CNP):
+    """Latent Neural Process
+
+    Parameters
+    ----------
+    x_dim : int
+        Dimension of the x values
+
+    y_dim : int
+        Dimension of the y values
+
+    **kwargs: dict
+        Additional Neural Process Family base class arguments
+    """
+
+    def __init__(
+        self,
+        x_dim,
+        y_dim,
+        **kwargs,
+    ):
+        super().__init__(x_dim, y_dim, **kwargs)
+
+    def encode_target_representation(self, x_context, z, R, x_target):
+
+        _, n_target, _ = x_target.shape
+
+        # Concatenate R and z along the feature axis
+        # [n_z, batch_size, n_lat, r_dim]
+        R_target = self.concat_r_z(R, z)
+
+        # [n_z, batch_size, n_target, r_dim]
+        R_target = R_target.repeat(1, 1, n_target, 1)
 
         return R_target
