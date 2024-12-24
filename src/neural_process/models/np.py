@@ -13,7 +13,6 @@ class CNP(NeuralProcessFamily):
 
     Parameters
     ----------
-
     x_dim : int
         Dimension of the x values
 
