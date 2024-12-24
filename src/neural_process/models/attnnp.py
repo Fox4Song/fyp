@@ -8,7 +8,7 @@ from modules import MLP, Attention
 from .base import NeuralProcessFamily, LatentNeuralProcessFamily
 
 
-class AttnCnp(NeuralProcessFamily):
+class AttnCNP(NeuralProcessFamily):
     """Attentive Conditional Neural Process
 
     Parameters
@@ -79,5 +79,51 @@ class AttnCnp(NeuralProcessFamily):
         # n_z = 1
         # [1, batch_size, n_target, r_dim]
         R_target = R_target.unsqueeze(0)
+
+        return R_target
+
+
+class AttnLNP(LatentNeuralProcessFamily, AttnCNP):
+    """Attentive Latent Neural Process
+
+    Parameters
+    ----------
+    x_dim : int
+        Dimension of the x values
+
+    y_dim : int
+        Dimension of the y values
+
+    kwargs: dict
+        Additional Neural Process Family base class arguments
+    """
+
+    def __init__(
+        self,
+        x_dim,
+        y_dim,
+        **kwargs,
+    ):
+        super().__init__(x_dim, y_dim, **kwargs)
+
+    def rep_to_lat_input(self, R):
+
+        # Mean aggregation
+        R = torch.mean(R, dim=1, keepdim=True)
+        return R
+
+    def encode_target_representation(self, x_context, z, R, x_target):
+
+        batch_size, n_target, _ = x_target.shape
+
+        # [n_z, batch_size, n_target, z_dim]
+        z = z.expand(1, batch_size, n_target, self.z_dim)
+
+        # [1, batch_size, n_target, r_dim]
+        R_det = AttnCNP.encode_target_representation(self, x_context, _, R, x_target)
+
+        # concat_r_z takes R as shape [batch_size, n_target, r_dim]
+        # [n_z, batch_size, n_target, r_dim]
+        R_target = self.concat_r_z(R_det.squeeze(0), z)
 
         return R_target
