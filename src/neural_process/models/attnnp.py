@@ -67,14 +67,14 @@ class AttnCNP(NeuralProcessFamily):
         R_c = self.encoder(x)
 
         if self.use_self_attention:
-            R_c = self.self_attention(R_c, R_c, R_c)
+            R_c, _ = self.self_attention(R_c, R_c, R_c)
 
         return R_c
 
     def encode_target_representation(self, x_context, _, R, x_target):
 
         # [batch_size, n_target, r_dim]
-        R_target = self.cross_attention(x_context, x_target, R)  # key, query, value
+        R_target, _ = self.cross_attention(x_context, x_target, R)  # key, query, value
 
         # n_z = 1
         # [1, batch_size, n_target, r_dim]
