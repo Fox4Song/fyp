@@ -155,7 +155,7 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
         x_context : torch.Tensor [batch_size, n_context, x_dim]
             Context x values
 
-        z : torch.Tensor [batch_size, r_dim]
+        z : torch.Tensor [n_z, batch_size, n_latents, r_dim]
             Sample from the prior distribution
 
         R : torch.Tensor [batch_size, n_reps, r_dim]
@@ -285,7 +285,6 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
 
         # [n_z, batch_size, n_lat, z_dim]
         z = sampling_dist.rsample([self.n_z])
-        print(z.shape)
 
         return z, q_zc, q_zct
 
@@ -357,7 +356,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         R_z_reshaped : torch.Tensor [n_z, batch_size, n_lat, r_dim]
             Concatenated tensor reshaped to match the input shape of the decoder
         """
-
+        
         assert R.size(1) == z.size(2)
 
         # [n_z, batch_size, n_lat, z_dim]
