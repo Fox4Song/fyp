@@ -356,7 +356,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         R_z_reshaped : torch.Tensor [n_z, batch_size, n_lat, r_dim]
             Concatenated tensor reshaped to match the input shape of the decoder
         """
-        
+
         assert R.size(1) == z.size(2)
 
         # [n_z, batch_size, n_lat, z_dim]

@@ -64,6 +64,9 @@ class MLP(nn.Module):
         )
         self.out = nn.Linear(self.hidden_size, self.output_size, bias=is_bias)
 
+        self._reset_parameters()
+
+    def _reset_parameters(self):
         # Initialise weights with Kaiming for RELU for now
         nn.init.kaiming_uniform_(self.to_hidden.weight, nonlinearity="relu")
         for linear in self.linears:
