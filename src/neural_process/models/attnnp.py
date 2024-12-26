@@ -39,6 +39,8 @@ class AttnCNP(NeuralProcessFamily):
         Encoder=None,
         attention_type="dot",
         use_self_attention=True,
+        self_attention_kwargs={},
+        cross_attention_kwargs={},
         **kwargs,
     ):
         super().__init__(x_dim, y_dim, **kwargs)
@@ -54,9 +56,22 @@ class AttnCNP(NeuralProcessFamily):
         self.encoder = Encoder(self.x_dim + self.y_dim, self.r_dim)
 
         if self.use_self_attention:
-            self.self_attention = Attention(attention_type)
+            self.self_attention = Attention(
+                self.r_dim,
+                self.r_dim,
+                self.r_dim,
+                rep="identity",
+                attention_type=attention_type,
+                **self_attention_kwargs,
+            )
 
-        self.cross_attention = Attention(attention_type)
+        self.cross_attention = Attention(
+            self.r_dim,
+            self.r_dim,
+            self.r_dim,
+            attention_type=attention_type,
+            **cross_attention_kwargs,
+        )
 
     def encode_context_representation(self, x_context, y_context):
 
@@ -67,14 +82,14 @@ class AttnCNP(NeuralProcessFamily):
         R_c = self.encoder(x)
 
         if self.use_self_attention:
-            R_c, _ = self.self_attention(R_c, R_c, R_c)
+            R_c = self.self_attention(R_c, R_c, R_c)
 
         return R_c
 
     def encode_target_representation(self, x_context, _, R, x_target):
 
         # [batch_size, n_target, r_dim]
-        R_target, _ = self.cross_attention(x_context, x_target, R)  # key, query, value
+        R_target = self.cross_attention(x_context, x_target, R)  # key, query, value
 
         # n_z = 1
         # [1, batch_size, n_target, r_dim]
