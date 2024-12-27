@@ -50,7 +50,7 @@ class ELBOLoss(nn.Module):
         nll_loss = negative_log_likelihood(p_y_dist, y_target)
         # [batch_size, n_targets]
         nll_loss = nll_loss.mean(0)
-        
+
         # n_lat = 1.
         # [batch_size, n_lat]
         kl_loss = kl_divergence(q_zct, q_zc).mean(-1)

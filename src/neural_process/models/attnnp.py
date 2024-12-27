@@ -38,6 +38,7 @@ class AttnCNP(NeuralProcessFamily):
         y_dim,
         Encoder=None,
         attention_type="dot",
+        n_self_attention=2,
         use_self_attention=True,
         self_attention_kwargs={},
         cross_attention_kwargs={},
@@ -56,13 +57,18 @@ class AttnCNP(NeuralProcessFamily):
         self.encoder = Encoder(self.x_dim + self.y_dim, self.r_dim)
 
         if self.use_self_attention:
-            self.self_attention = Attention(
-                self.r_dim,
-                self.r_dim,
-                self.r_dim,
-                rep="identity",
-                attention_type=attention_type,
-                **self_attention_kwargs,
+            self.self_attention = nn.ModuleList(
+                [
+                    Attention(
+                        self.r_dim,
+                        self.r_dim,
+                        self.r_dim,
+                        rep="identity",
+                        attention_type=attention_type,
+                        **self_attention_kwargs,
+                    )
+                    for _ in range(n_self_attention)
+                ]
             )
 
         self.cross_attention = Attention(
@@ -82,7 +88,8 @@ class AttnCNP(NeuralProcessFamily):
         R_c = self.encoder(x)
 
         if self.use_self_attention:
-            R_c = self.self_attention(R_c, R_c, R_c)
+            for attn_layer in self.self_attention:
+                R_c = attn_layer(R_c, R_c, R_c)
 
         return R_c
 
