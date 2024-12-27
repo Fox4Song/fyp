@@ -38,7 +38,7 @@ class Attention(nn.Module):
 
     x_size : int (optional)
         Input feature size for the MLP when `rep` is `"mlp"`.
-    
+
     attention_layers : int (optional)
         Number of hidden layers in the MLP when `rep` is `"mlp"`.
 
@@ -123,7 +123,7 @@ class Attention(nn.Module):
 
     def dot_attention(self, k, q, v):
         """Scaled Dot Product Attention
-        
+
         Parameters
         ----------
         k : torch.Tensor [batch_size, n_k, kq_size]

@@ -68,17 +68,18 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
 
         Returns
         -------
-        p_y_target : torch.distributions.Distribution
+        p_y_target : torch.distributions.Distribution [n_z, batch_size, n_target, y_dim]
             Posterior distribution for y valuees
 
-        z : torch.Tensor [n_z, batch_size, z_dim]
+        z : torch.Tensor [n_z, batch_size, n_lat, z_dim]
             Sampled latent variables
 
-        q_zc : torch.distributions.Distribution
+        q_zc : torch.distributions.Distribution [batch_size, n_lat, z_dim]
             Prior distribution for z conditioned on context
 
-        q_zct : torch.distributions.Distribution
+        q_zct : torch.distributions.Distribution [batch_size, n_lat, z_dim]
             Posterior distribution for z conditioned on context and target
+            Returns `None` if `y_target` is not provided (e.g., during testing).
         """
 
         # Encode context set into representation R
@@ -134,13 +135,13 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
 
         Returns
         -------
-        z : torch.Tensor [n_z, batch_size, n_latents, z_dim]
+        z : torch.Tensor [n_z, batch_size, n_lat, z_dim]
             Sampled latent variablea
 
-        q_zc : torch.distributions.Distribution
+        q_zc : torch.distributions.Distribution [batch_size, n_lat, z_dim]
             Prior distribution for z conditioned on context
 
-        q_zct : torch.distributions.Distribution
+        q_zct : torch.distributions.Distribution [batch_size, n_lat, z_dim]
             Posterior distribution for z conditioned on context and target
         """
 
@@ -155,7 +156,7 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
         x_context : torch.Tensor [batch_size, n_context, x_dim]
             Context x values
 
-        z : torch.Tensor [n_z, batch_size, n_latents, r_dim]
+        z : torch.Tensor [n_z, batch_size, n_lat, r_dim]
             Sample from the prior distribution
 
         R : torch.Tensor [batch_size, n_reps, r_dim]
