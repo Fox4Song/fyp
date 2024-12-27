@@ -1,2 +1,3 @@
-from .mlp import MLP
 from .attention import Attention
+from .loss import *
+from .mlp import MLP
