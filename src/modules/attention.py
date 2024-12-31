@@ -188,15 +188,6 @@ class Attention(nn.Module):
         v = self.W_v(v)
 
         # [batch_size * n_heads, n_k, head_size]
-        # k, v, q = [
-        #     (
-        #         x.view(batch_size, -1, self.n_heads, self.kq_head_size)
-        #         .permute(1, 2, 0, 3)
-        #         .contiguous()
-        #         .view(batch_size, -1, self.n_heads * self.kq_head_size)
-        #     )
-        #     for x in (k, v, q)
-        # ]
         k, v, q = [
             (
                 x.view(batch_size, -1, self.n_heads, self.kq_head_size)
@@ -213,12 +204,6 @@ class Attention(nn.Module):
 
         # Concat attention heads
         # [batch_size, n_k, v_size]
-        # multi_head_attn = (
-        #     attn_head_weights.view(self.n_heads, batch_size, -1, self.kq_head_size)
-        #     .permute(1, 2, 0, 3)
-        #     .contiguous()
-        #     .view(batch_size, -1, self.n_heads * self.kq_head_size)
-        # )
         multi_head_attn = (
             attn_head_weights.view(batch_size, self.n_heads, -1, self.kq_head_size)
             .transpose(1, 2)
