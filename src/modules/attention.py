@@ -109,7 +109,6 @@ class Attention(nn.Module):
             raise NotImplementedError
 
     def _reset_parameters(self):
-
         nn.init.xavier_normal_(self.W_k.weight)
         nn.init.xavier_normal_(self.W_q.weight)
         nn.init.xavier_normal_(self.W_v.weight)
@@ -183,33 +182,51 @@ class Attention(nn.Module):
 
         batch_size = q.size(0)
 
+        # Apply Linear Projections
         k = self.W_k(k)
         q = self.W_q(q)
         v = self.W_v(v)
 
         # [batch_size * n_heads, n_k, head_size]
+        # k, v, q = [
+        #     (
+        #         x.view(batch_size, -1, self.n_heads, self.kq_head_size)
+        #         .permute(1, 2, 0, 3)
+        #         .contiguous()
+        #         .view(batch_size, -1, self.n_heads * self.kq_head_size)
+        #     )
+        #     for x in (k, v, q)
+        # ]
         k, v, q = [
             (
                 x.view(batch_size, -1, self.n_heads, self.kq_head_size)
-                .permute(1, 2, 0, 3)
+                .transpose(1, 2)
                 .contiguous()
-                .view(batch_size, -1, self.n_heads * self.kq_head_size)
+                .view(batch_size * self.n_heads, -1, self.kq_head_size)
             )
             for x in (k, v, q)
         ]
 
+        # Apply scaled dot-product attention
         # [batch_size * n_heads, n_k, head_size]
         attn_head_weights = self.dot_attention(k, q, v)
 
         # Concat attention heads
         # [batch_size, n_k, v_size]
+        # multi_head_attn = (
+        #     attn_head_weights.view(self.n_heads, batch_size, -1, self.kq_head_size)
+        #     .permute(1, 2, 0, 3)
+        #     .contiguous()
+        #     .view(batch_size, -1, self.n_heads * self.kq_head_size)
+        # )
         multi_head_attn = (
-            attn_head_weights.view(self.n_heads, batch_size, -1, self.kq_head_size)
-            .permute(1, 2, 0, 3)
+            attn_head_weights.view(batch_size, self.n_heads, -1, self.kq_head_size)
+            .transpose(1, 2)
             .contiguous()
             .view(batch_size, -1, self.n_heads * self.kq_head_size)
         )
 
+        # Final Linear Projection
         # [batch_size, n_q, out_size]
         out = self.W_o(multi_head_attn)
 
