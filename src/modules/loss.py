@@ -44,10 +44,12 @@ class ELBOLoss(nn.Module):
         super().__init__()
 
     def forward(self, p_y_dist, q_zct, q_zc, y_target):
-        # L_vi = log(p_y_xc) - kl(p_zct||p_zc)
+        # L_vi = E[log(p_y_xc)] - kl(p_zct||p_zc)
 
         # [n_z, batch_size, n_targets]
         nll_loss = negative_log_likelihood(p_y_dist, y_target)
+
+        # Expectation over n z samples
         # [batch_size, n_targets]
         nll_loss = nll_loss.mean(0)
 
