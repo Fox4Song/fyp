@@ -1,3 +1,5 @@
+# GP dataset adapted from https://github.com/google-deepmind/neural-processes
+
 import torch
 import torch.nn as nn
 
