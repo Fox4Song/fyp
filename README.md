@@ -17,16 +17,16 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 ## Examples on 1D Toy Regression Dataset
 
 ### CNP
-<img src="images/1d_toy_regression/CNP1.png" width="320" height="240"> <img src="images/1d_toy_regression/CNP2.png" width="320" height="240"> <img src="images/1d_toy_regression/CNP3.png" width="320" height="240">
+<img src="images/1d_toy_regression/CNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/CNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/CNP3.png" width="240" height="180">
 
 ### LNP 
-<img src="images/1d_toy_regression/LNP1.png" width="320" height="240"> <img src="images/1d_toy_regression/LNP2.png" width="320" height="240"> <img src="images/1d_toy_regression/LNP3.png" width="320" height="240">
+<img src="images/1d_toy_regression/LNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/LNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/LNP3.png" width="240" height="180">
 
 ### AttnCNP
-<img src="images/1d_toy_regression/AttnCNP1.png" width="320" height="240"> <img src="images/1d_toy_regression/AttnCNP2.png" width="320" height="240"> <img src="images/1d_toy_regression/AttnCNP3.png" width="320" height="240">
+<img src="images/1d_toy_regression/AttnCNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnCNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnCNP3.png" width="240" height="180">
 
 ## AttnLNP
-<img src="images/1d_toy_regression/AttnLNP1.png" width="320" height="240"> <img src="images/1d_toy_regression/AttnLNP2.png" width="320" height="240"> <img src="images/1d_toy_regression/AttnLNP3.png" width="320" height="240">
+<img src="images/1d_toy_regression/AttnLNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP3.png" width="240" height="180">
 
 
 ## References
