@@ -41,7 +41,7 @@ class MLP(nn.Module):
         n_hidden_layers=1,
         activation=nn.ReLU(),
         is_bias=True,
-        dropout=0.1,
+        dropout=0,
         is_res=False,
     ):
         super().__init__()
