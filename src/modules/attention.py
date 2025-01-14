@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from .mlp import MLP
 
@@ -69,6 +70,7 @@ class Attention(nn.Module):
 
         self.rep = rep
         self.mask = mask
+        self.dropout_p = dropout
         self.dropout = nn.Dropout(p=dropout)
 
         if self.rep == "mlp":
@@ -120,7 +122,7 @@ class Attention(nn.Module):
             q = self.rep_q(q)
         return self.attention(k, q, v)
 
-    def dot_attention(self, k, q, v):
+    def _dot_attention(self, k, q, v):
         """Scaled Dot Product Attention
 
         Parameters
@@ -155,6 +157,13 @@ class Attention(nn.Module):
         rep = torch.bmm(norm_attn_weights, v)
 
         return rep
+
+    def dot_attention(self, k, q, v):
+        """Pytorch Scaled Dot-Product Attention with Flash Attention"""
+
+        return F.scaled_dot_product_attention(
+            q, k, v, attn_mask=self.mask, dropout_p=self.dropout_p
+        )
 
     def multi_head_attention(self, k, q, v):
         """Multihead Attention
