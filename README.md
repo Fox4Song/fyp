@@ -36,7 +36,7 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 - Still demonstrated underfitting issues.
 - 'Kinks' in predictive distribution.
 
-## AttnLNP
+### AttnLNP
 <img src="images/1d_toy_regression/AttnLNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP3.png" width="240" height="180">
 
 
