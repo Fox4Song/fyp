@@ -19,11 +19,22 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 ### CNP
 <img src="images/1d_toy_regression/CNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/CNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/CNP3.png" width="240" height="180">
 
+- Suffers from underfitting.
+- Often does not pass through all context points.
+- Overestimates uncertainty.
+
 ### LNP 
 <img src="images/1d_toy_regression/LNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/LNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/LNP3.png" width="240" height="180">
 
+- Produces coherent sampling from the posterior predictive.
+- Same underfitting issues as CNP
+- Beyond [-1,1], model seems to disregard context points and uncertainty despite being trained in the range [-2,2].
+
 ### AttnCNP
 <img src="images/1d_toy_regression/AttnCNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnCNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnCNP3.png" width="240" height="180">
+
+- Still demonstrated underfitting issues.
+- 'Kinks' in predictive distribution.
 
 ## AttnLNP
 <img src="images/1d_toy_regression/AttnLNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP3.png" width="240" height="180">
