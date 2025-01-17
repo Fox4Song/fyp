@@ -27,14 +27,13 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 <img src="images/1d_toy_regression/LNP-160000.png" width="240" height="180"> <img src="images/1d_toy_regression/LNP-180000.png" width="240" height="180"> <img src="images/1d_toy_regression/LNP-200000.png" width="240" height="180">
 
 - Produces coherent sampling from the posterior predictive.
-- Same underfitting issues as CNP
-- Beyond [-1,1], model seems to disregard context points and uncertainty despite being trained in the range [-2,2].
 
 ### AttnCNP
 <img src="images/1d_toy_regression/AttnCNP-140000.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnCNP-160000.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnCNP-180000.png" width="240" height="180">
 
-- Still demonstrated underfitting issues.
+- Still demonstrates underfitting issues.
 - 'Kinks' in predictive distribution.
+- Beyond [-1,1], model seems to disregard context points and uncertainty despite being trained in the range [-2,2].
 
 ## References
 - [1]. Dubois Y, Gordon J, Foong AYK. Neural Process Family. September 2020. Available from: http://yanndubs.github.io/Neural-Process-Family/  
