@@ -36,10 +36,6 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 - Still demonstrated underfitting issues.
 - 'Kinks' in predictive distribution.
 
-### AttnLNP
-<img src="images/1d_toy_regression/AttnLNP1.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP2.png" width="240" height="180"> <img src="images/1d_toy_regression/AttnLNP3.png" width="240" height="180">
-
-
 ## References
 - [1]. Dubois Y, Gordon J, Foong AYK. Neural Process Family. September 2020. Available from: http://yanndubs.github.io/Neural-Process-Family/  
 - [2]. Tuan Anh Le, Hyunjik Kim, Marta Garnelo, Dan Rosenbaum, Jonathan Schwarz, and Yee Whye Teh. Empirical evaluation of neural process objectives. In NeurIPS workshop on Bayesian Deep Learning. 2018.  
