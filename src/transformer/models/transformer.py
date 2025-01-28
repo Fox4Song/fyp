@@ -5,7 +5,28 @@ from modules import PositionalEncoding
 
 
 class Transformer(nn.Module):
-    """Transformer model"""
+    """Transformer model
+    
+    Parameters
+    ----------
+    x_dim : int
+        Dimension of the x values
+
+    y_dim : int
+        Dimension of the y values
+
+    r_dim : int (optional)
+        Dimension of the representation
+
+    encoder_layers : int (optional)
+        Number of encoder layers
+
+    encoder_heads : int (optional)
+        Number of encoder heads
+
+    kwargs: dict
+        Additional Transformer class arguments
+    """
 
     def __init__(
         self, x_dim, y_dim, r_dim=128, encoder_layers=2, encoder_heads=8, **kwargs
