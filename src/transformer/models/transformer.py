@@ -6,7 +6,7 @@ from modules import PositionalEncoding
 
 class Transformer(nn.Module):
     """Transformer model
-    
+
     Parameters
     ----------
     x_dim : int
