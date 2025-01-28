@@ -7,7 +7,19 @@ import torch.nn as nn
 
 
 class PositionalEncoding(nn.Module):
-    "PE function. Taken from The Annotated Tranformer https://nlp.seas.harvard.edu/annotated-transformer/"
+    """PE function. Taken from The Annotated Tranformer https://nlp.seas.harvard.edu/annotated-transformer/
+    
+    Parameters
+    ----------
+    d_model : int
+        Dimension of the model
+        
+    dropout : float (optional)
+        Dropout rate
+        
+    max_len : int (optional)
+        Maximum length of the sequence
+    """
 
     def __init__(self, d_model, dropout=0, max_len=5000):
         super().__init__()
