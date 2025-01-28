@@ -137,9 +137,10 @@ class AttnLNP(LatentNeuralProcessFamily, AttnCNP):
     def encode_target_representation(self, x_context, z, R, x_target):
 
         batch_size, n_target, _ = x_target.shape
+        n_z = z.size(0)
 
         # [n_z, batch_size, n_target, z_dim]
-        z = z.expand(1, batch_size, n_target, self.z_dim)
+        z = z.expand(n_z, batch_size, n_target, self.z_dim)
 
         # [1, batch_size, n_target, r_dim]
         R_det = AttnCNP.encode_target_representation(self, x_context, _, R, x_target)
