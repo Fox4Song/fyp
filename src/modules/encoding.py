@@ -8,15 +8,15 @@ import torch.nn as nn
 
 class PositionalEncoding(nn.Module):
     """PE function. Taken from The Annotated Tranformer https://nlp.seas.harvard.edu/annotated-transformer/
-    
+
     Parameters
     ----------
     d_model : int
         Dimension of the model
-        
+
     dropout : float (optional)
         Dropout rate
-        
+
     max_len : int (optional)
         Maximum length of the sequence
     """

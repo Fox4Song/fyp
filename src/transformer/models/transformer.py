@@ -55,7 +55,7 @@ class Transformer(nn.Module):
 
     def forward(self, x_context, y_context, x_target):
         n_x_target = x_target.size(1)
-        print(n_x_target)
+        
         # [batch_size, 2 * n_context + x_target, x_dim]
         x = torch.cat([x_context, y_context, x_target], dim=1)
 
