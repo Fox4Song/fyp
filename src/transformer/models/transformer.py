@@ -55,7 +55,7 @@ class Transformer(nn.Module):
 
     def forward(self, x_context, y_context, x_target):
         n_x_target = x_target.size(1)
-        
+
         # [batch_size, 2 * n_context + x_target, x_dim]
         x = torch.cat([x_context, y_context, x_target], dim=1)
 
@@ -67,7 +67,6 @@ class Transformer(nn.Module):
         R = self.encoder(R_c)
 
         # [batch_size, n_target, y_dim]
-        print(R.shape)
         out = self.out(R[:, -n_x_target:, :])
-        print(out.shape)
+
         return out
