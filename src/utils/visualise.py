@@ -161,14 +161,13 @@ def plot_loss_comparison(max_num_context, np_losses, tf_losses, save_fig=None):
     """
 
     plt.plot(range(1, max_num_context+1), np_losses, 'b', linewidth=2, label='NP Loss')
-    plt.plot(range(1, max_num_context+1), tf_losses, 'b', linewidth=2, label='Transformer Loss')
+    plt.plot(range(1, max_num_context+1), tf_losses, 'r', linewidth=2, label='Transformer Loss')
 
     plt.xlabel('Number of Context Points', fontsize=14)
-    plt.ylabel('Mean Squared Error (MSE) Loss', fontsize=14)
+    plt.ylabel('MSE Loss', fontsize=14)
     plt.title('Model Loss Comparison vs. Number of Context Points', fontsize=16)
     plt.legend(fontsize=12)
     plt.grid(False)
     if save_fig:
         plt.savefig(save_fig)
     plt.show()
-    
