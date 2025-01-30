@@ -35,11 +35,13 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 - Still demonstrates underfitting issues.
 - 'Kinks' in predictive distribution.
 
-### Inference plots for NPs and Transformers
+## Influence of Context Points
+
+### Inference Plots for NPs and Transformers
 
 <img src="images/1d_toy_regression/np_vs_tf_2_context.png" width="240" height="180"> <img src="images/1d_toy_regression/np_vs_tf_4_context.png" width="240" height="180"> <img src="images/1d_toy_regression/np_vs_tf_10_context.png" width="240" height="180">
 
-- NP generally captures the overall ground truth function better
+- NP generally captures the overall ground truth function better.
 - Transformer appears to struggle in regions where the function has high variability, especially around sharp peaks.
 
 <img src="images/1d_toy_regression/np_vs_tf_20_context.png" width="240" height="180">
@@ -49,6 +51,16 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 - NP improves its fit and produces narrower uncertainty regions.
 - Transformer performance deteriorates.
 - Transformer's sensitivity to the number of context points might indicate it is not effectively utilising global dependencies.
+
+### Model Loss
+
+<img src="images/1d_toy_regression/model_loss_over_30_context.png" width="240" height="180">
+
+- Loss decreases sharply, indicating both models are effectively learning from added context.
+- NP stabilises quickly ~10 context points.
+- Transformer initially follows same trend as NP.
+- Demonstrates some "phase change" at ~10 context points.
+- Beyond 10 context points, displays somewhat consistent high loss with slight fluctuation.
 
 ## References
 - [1]. Dubois Y, Gordon J, Foong AYK. Neural Process Family. September 2020. Available from: http://yanndubs.github.io/Neural-Process-Family/  
