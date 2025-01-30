@@ -108,10 +108,15 @@ class GPCurvesReader(nn.Module):
         )
         return kernel
 
-    def generate_curves(self):
+    def generate_curves(self, num_context=None):
         """Builds the op delivering the data.
 
         Generated functions are float32 tensors with x values between -2 and 2.
+
+        Parameters
+        ----------
+        num_context : int (optional)
+            Number of observations in the context
 
         Returns
         -------
@@ -134,7 +139,10 @@ class GPCurvesReader(nn.Module):
             The number of context points
         """
 
-        num_context = torch.randint(low=3, high=self._max_num_context + 1, size=(1,))
+        if num_context is None:
+            num_context = torch.randint(
+                low=3, high=self._max_num_context + 1, size=(1,)
+            )
 
         # If we are testing we want to have more targets and have them evenly
         # distributed in order to plot the function.
