@@ -131,7 +131,7 @@ def plot_model_comparisons(
     plt.yticks([-2, 0, 2], fontsize=16)
     plt.xticks([-2, 0, 2], fontsize=16)
     plt.ylim([-2, 2])
-    plt.title(f'Function Prediction with {num_context} Context Points', fontsize=16)
+    plt.title(f"Function Prediction with {num_context} Context Points", fontsize=16)
     plt.legend(fontsize=12)
     plt.grid(False)
     ax = plt.gca()
@@ -140,8 +140,8 @@ def plot_model_comparisons(
         plt.savefig(save_fig)
     plt.show()
 
-def plot_loss_comparison(max_num_context, np_losses, tf_losses, save_fig=None):
 
+def plot_loss_comparison(max_num_context, np_losses, tf_losses, save_fig=None):
     """
     Plots the loss of Neural Process and Transformer models against the number of context points.
 
@@ -160,12 +160,20 @@ def plot_loss_comparison(max_num_context, np_losses, tf_losses, save_fig=None):
         The file path to save the figure. If None, the figure is not saved.
     """
 
-    plt.plot(range(1, max_num_context+1), np_losses, 'b', linewidth=2, label='NP Loss')
-    plt.plot(range(1, max_num_context+1), tf_losses, 'r', linewidth=2, label='Transformer Loss')
+    plt.plot(
+        range(1, max_num_context + 1), np_losses, "b", linewidth=2, label="NP Loss"
+    )
+    plt.plot(
+        range(1, max_num_context + 1),
+        tf_losses,
+        "r",
+        linewidth=2,
+        label="Transformer Loss",
+    )
 
-    plt.xlabel('Number of Context Points', fontsize=14)
-    plt.ylabel('MSE Loss', fontsize=14)
-    plt.title('Model Loss Comparison vs. Number of Context Points', fontsize=16)
+    plt.xlabel("Number of Context Points", fontsize=14)
+    plt.ylabel("MSE Loss", fontsize=14)
+    plt.title("Model Loss Comparison vs. Number of Context Points", fontsize=16)
     plt.legend(fontsize=12)
     plt.grid(False)
     if save_fig:
