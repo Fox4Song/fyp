@@ -1,8 +1,7 @@
 import random
 import math
+import torch
 import torch.nn as nn
-
-from utils import plot_polygon
 
 
 class Polygon(object):
@@ -20,6 +19,7 @@ class Polygon(object):
     to_tokenised():
         Converts the polygon data into a tokenised flat list in the format:
             [n, x1, y1, x2, y2, ..., xn, yn, L1, L2, ..., Ln, A1, A2, ..., An].
+
     from_tokenised(tokenised):
         Class method that creates a Polygon instance from a tokenised flat list.
     """
@@ -76,7 +76,7 @@ class Polygon(object):
         Polygon
             A new instance of Polygon constructed from the tokenised data.
         """
-        n = tokenised[0]
+        n = int(tokenised[0])
         vertices_flat = tokenised[1 : 1 + 2 * n]
         vertices = []
         for i in range(0, len(vertices_flat), 2):
@@ -94,7 +94,7 @@ class Polygon(object):
         )
 
 
-class PolygonSentenceGenerator(nn.Module):
+class PolygonSentenceReader(nn.Module):
     """
     Creates a dataset of polygon sentences by generating convex polygons,
     computing their side lengths and interior angles, and tokenizing the result
@@ -107,22 +107,42 @@ class PolygonSentenceGenerator(nn.Module):
 
     Parameters
     ----------
+    batch_size : int
+        Number of polygon sentences to sample.
+
     min_num_sides : int
         Minimum number of sides (vertices) for the polygon.
+
     max_num_sides : int
         Maximum number of sides (vertices) for the polygon.
-    center : tuple, optional
+
+    center : tuple (optional)
         Center of the circle used for generating polygon vertices (default is (5, 5)).
-    radius : float, optional
+
+    radius : float (optional)
         Radius of the circle used for generating polygon vertices (default is 3).
     """
 
-    def __init__(self, min_num_sides, max_num_sides, center=(5, 5), radius=3):
-        super(PolygonSentenceGenerator, self).__init__()
+    def __init__(
+        self,
+        batch_size,
+        max_num_context,
+        max_seq_len,
+        min_num_sides,
+        max_num_sides,
+        center=(5, 5),
+        radius=3,
+        testing=False,
+    ):
+        super(PolygonSentenceReader, self).__init__()
+        self.batch_size = batch_size
+        self.max_num_context = max_num_context
+        self.max_seq_len = max_seq_len
         self.min_num_sides = min_num_sides
         self.max_num_sides = max_num_sides
         self.center = center
         self.radius = radius
+        self.testing = testing
 
     def _generate_random_convex_polygon(self, n):
         """
@@ -211,11 +231,71 @@ class PolygonSentenceGenerator(nn.Module):
             dot = v1[0] * v2[0] + v1[1] * v2[1]
             mag1 = math.hypot(*v1)
             mag2 = math.hypot(*v2)
-            angle_rad = math.acos(dot / (mag1 * mag2))
+
+            denom = mag1 * mag2
+
+            # If the denominator is near zero, set the angle to 0 (or handle appropriately)
+            if denom < 1e-6:
+                angle_rad = 0.0
+            else:
+                # Clamp the cosine value to the range [-1, 1] to avoid math domain errors.
+                cosine = max(min(dot / denom, 1.0), -1.0)
+                angle_rad = math.acos(cosine)
             angles.append(math.degrees(angle_rad))
         return angles
 
-    def generate_polygon(self):
+    def _process_sample(self, tokens, mask):
+        """
+        Given a tokenized polygon and its binary mask, returns context set split.
+        """
+        x, y = [], []
+        for token, m in zip(tokens, mask):
+            if m == 1:
+                x.append(token)
+            else:
+                y.append(token)
+        return x, y
+
+    def _pad_batch(self, list_of_lists, pad_length):
+        """
+        Pads a list of token lists to a fixed length with zeros.
+
+        Parameters
+        ----------
+        list_of_lists : list of lists
+            Each inner list is a sequence of tokens (numbers).
+
+        pad_length : int
+            The desired fixed length for each sequence.
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of shape [B, pad_length] with each sequence padded with 0s.
+        """
+        padded = []
+        for tokens in list_of_lists:
+            tokens = list(tokens)
+            pad_len = pad_length - len(tokens)
+            if pad_len > 0:
+                tokens = tokens + [0] * pad_len
+            else:
+                tokens = tokens[:pad_length]
+            padded.append(torch.tensor(tokens, dtype=torch.float))
+        return torch.stack(padded)
+
+    def generate_random_mask(self, token_length):
+        # Force the first token to be 1.
+        mask = [1]
+        for _ in range(token_length - 1):
+            mask.append(random.choice([0, 1]))
+        # Ensure at least one token (besides the first) is masked.
+        if all(m == 1 for m in mask[1:]):
+            idx = random.randint(1, token_length - 1)
+            mask[idx] = 0
+        return mask
+
+    def generate_polygon(self, n=None):
         """
         Generates a polygon by constructing a convex polygon, computing its side lengths and interior angles.
 
@@ -225,9 +305,105 @@ class PolygonSentenceGenerator(nn.Module):
             A Polygon object representing the generated convex polygon.
         """
         # Randomly choose the number of sides within the specified range.
-        n = random.randint(self.min_num_sides, self.max_num_sides)
+        if n is None:
+            n = random.randint(self.min_num_sides, self.max_num_sides)
         vertices = self._generate_random_convex_polygon(n)
         lengths = self._compute_side_lengths(vertices)
         angles = self._compute_interior_angles(vertices)
 
         return Polygon(vertices, lengths, angles)
+
+    def generate_masked_polygon_batch(self, num_context=None):
+        """
+        Generates a batch of polygons
+
+        Returns
+        -------
+        context_x : torch.Tensor [B, num_context, x_size]
+            The x values of the context points
+
+        context_y : torch.Tensor [B, num_context, y_size]
+            The y values of the context points
+
+        target_x : torch.Tensor [B, num_target, x_size]
+            The x values of the target points
+
+        target_y : torch.Tensor [B, num_target, y_size]
+            The y values of the target points
+
+        max_total_tokens : int
+            Maximum number of tokens (after padding) in the batch.
+
+        num_context : int
+            Number of context points in the batch.
+        """
+
+        if num_context is None:
+            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+
+        context_x, context_y = [], []
+        target_x, target_y = [], []
+        total_tokens_list = []
+        true_target_polygons = []
+
+        for _ in range(self.batch_size):
+
+            tokens_list = []
+
+            # Choose a fixed number of sides for this sample
+            n = random.randint(self.min_num_sides, self.max_num_sides)
+
+            # Generate the target polygon and its tokenised form.
+            target_poly = self.generate_polygon(n)
+            target_tokens = target_poly.to_tokenised()
+            total_tokens = len(target_tokens)
+
+            # For testing, use a deterministic mask (e.g., first half context, second half target)
+            if self.testing:
+                mask = [1] * (1 + 2 * n) + [0] * (total_tokens - (1 + 2 * n))
+            else:
+                mask = self.generate_random_mask(total_tokens)
+            # Ensure first token is always context.
+            mask[0] = 1
+
+            context_x_list, context_y_list = [], []
+
+            for _ in range(num_context):
+                poly = self.generate_polygon(n)
+                tokens = poly.to_tokenised()
+                tokens_list.append(tokens)
+                cx, cy = self._process_sample(tokens, mask)
+                context_x_list.append(cx)
+                context_y_list.append(cy)
+
+            tx, ty = self._process_sample(target_tokens, mask)
+
+            # Pad each list into a tensor.
+            context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
+            context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
+            target_x_pad = self._pad_batch([tx], self.max_seq_len)
+            target_y_pad = self._pad_batch([ty], self.max_seq_len)
+
+            context_x.append(context_x_pad)
+            context_y.append(context_y_pad)
+            target_x.append(target_x_pad)
+            target_y.append(target_y_pad)
+            total_tokens_list.append(total_tokens)
+            true_target_polygons.append(target_poly)
+
+        # Stack individual samples to create batch tensors.
+        context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
+        context_y = torch.stack(context_y)
+        target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
+        target_y = torch.stack(target_y)
+
+        return (
+            context_x,
+            context_y,
+            target_x,
+            target_y,
+            total_tokens_list,
+            true_target_polygons,
+            self.max_seq_len,
+            num_context,
+        )
