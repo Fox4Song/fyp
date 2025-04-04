@@ -58,10 +58,10 @@ class Attention(nn.Module):
         kq_size,
         v_size,
         out_size,
+        x_size=1,
         n_heads=8,
         attention_type="dot",
         rep="mlp",
-        x_size=1,
         attention_layers=2,
         mask=None,
         dropout=0,
@@ -69,7 +69,7 @@ class Attention(nn.Module):
         super().__init__()
 
         self.rep = rep
-        self.mask = mask
+        self.mask = mask  # Expected shape: [batch_size, n_queries, n_keys]
         self.dropout_p = dropout
         self.dropout = nn.Dropout(p=dropout)
 
@@ -92,23 +92,42 @@ class Attention(nn.Module):
         if attention_type == "dot":
             self.attention = self.dot_attention
 
-        elif attention_type == "multihead":
+        elif attention_type in ("multihead", "transformer"):
+            # Ensure dimensions are divisible by the number of heads
             assert kq_size % n_heads == 0
             assert v_size % n_heads == 0
-            self.attention = self.multi_head_attention
+            if attention_type == "transformer":
+                # For transformer attention, we require the output to match the key/query dimension
+                assert kq_size == out_size
+            self.attention = (
+                self.multi_head_attention
+                if attention_type == "multihead"
+                else self.transformer_attention
+            )
             self.kq_size = kq_size
             self.v_size = v_size
             self.out_size = out_size
             self.n_heads = n_heads
-            self.kq_head_size = self.kq_size // self.n_heads
-            self.W_k = nn.Linear(self.kq_size, self.kq_size, bias=False)
-            self.W_q = nn.Linear(self.kq_size, self.kq_size, bias=False)
-            self.W_v = nn.Linear(self.v_size, self.v_size, bias=False)
-            self.W_o = nn.Linear(self.v_size, self.out_size, bias=False)
+            self.kq_head_size = kq_size // n_heads
+            self.v_head_size = v_size // n_heads
+
+            # Linear projections for keys, queries, and values, and the output projection
+            self.W_k = nn.Linear(kq_size, kq_size, bias=False)
+            self.W_q = nn.Linear(kq_size, kq_size, bias=False)
+            self.W_v = nn.Linear(v_size, v_size, bias=False)
+            self.W_o = nn.Linear(v_size, out_size, bias=False)
+
+            if attention_type == "transformer":
+                self.layer_norm1 = nn.LayerNorm(out_size)
+                self.layer_norm2 = nn.LayerNorm(out_size)
+                # Feed-Forward Network with an expansion factor of 4
+                self.ffn = MLP(out_size, out_size, hidden_size=4 * out_size)
             self._reset_parameters()
 
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                f"Attention type '{attention_type}' is not implemented."
+            )
 
     def _reset_parameters(self):
         nn.init.xavier_normal_(self.W_k.weight)
@@ -223,5 +242,33 @@ class Attention(nn.Module):
         # Final Linear Projection
         # [batch_size, n_q, out_size]
         out = self.W_o(multi_head_attn)
+
+        return out
+
+    def transformer_attention(self, k, q, v):
+        """Transformer Attention
+
+        Parameters
+        ----------
+        k : torch.Tensor [batch_size, n_k, kq_size]
+            Keys in the attention mechanism
+
+        q : torch.Tensor [batch_size, n_q, kq_size]
+            Queries in the attention mechanism
+
+        v : torch.Tensor [batch_size, n_v, kq_size]
+            Values in the attention mechanism
+
+        Returns
+        -------
+        rep : torch.Tensor [batch_size, n_q, out_size]
+            Transformer attention output
+        """
+
+        out = self.multi_head_attention(k, q, v)
+        # Add & Norm
+        out = self.layer_norm1(out + q)
+        # Feed-forward network with residual connection and normalisation
+        out = self.layer_norm2(out + self.ffn(out))
 
         return out

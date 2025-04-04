@@ -63,6 +63,7 @@ class AttnCNP(NeuralProcessFamily):
                         self.r_dim,
                         self.r_dim,
                         self.r_dim,
+                        x_size=self.x_dim,
                         rep="identity",
                         attention_type=attention_type,
                         **self_attention_kwargs,
@@ -75,6 +76,7 @@ class AttnCNP(NeuralProcessFamily):
             self.r_dim,
             self.r_dim,
             self.r_dim,
+            x_size=self.x_dim,
             attention_type=attention_type,
             **cross_attention_kwargs,
         )
