@@ -86,7 +86,7 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
         R = self.encode_context_representation(x_context, y_context)
 
         # Sample latent variables z
-        z, q_zc, q_zct = self.encode_latent(x_context, R, x_target, y_target)
+        z, q_zc, q_zct = self.encode_latent(x_context, y_context, R, x_target, y_target)
 
         # Encode target-dependent representation R_target
         R_target = self.encode_target_representation(x_context, z, R, x_target)
@@ -116,13 +116,16 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
 
         pass
 
-    def encode_latent(self, x_context, R, x_target, y_target):
+    def encode_latent(self, x_context, y_context, R, x_target, y_target):
         """Encodes the latent variable z.
 
         Parameters
         ----------
         x_context : torch.Tensor [batch_size, n_context, x_dim]
             Context x values
+
+        y_context : torch.Tensor [batch_size, n_context, y_dim]
+            Context y values
 
         R : torch.Tensor [batch_size, n_reps, r_dim]
             Global representation of the context set
@@ -243,6 +246,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         n_z_train=1,
         n_z_test=1,
         LatentEncoder=None,
+        gp=False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -250,6 +254,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         self.z_dim = self.r_dim
         self.n_z_train = n_z_train
         self.n_z_test = n_z_test
+        self.gp = gp
 
         if LatentEncoder is None:
             LatentEncoder = partial(
@@ -267,7 +272,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
 
         return super().forward(*args, **kwargs)
 
-    def encode_latent(self, x_context, R, x_target, y_target):
+    def encode_latent(self, x_context, y_context, R, x_target, y_target):
 
         # [batch_size, n_lat, z_dim]
         R_input = self.rep_to_lat_input(R)
@@ -275,6 +280,10 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         q_zc = self.infer_latent_dist(R_input)
 
         if self.training and y_target is not None:
+            # if Gaussian Process, then target set already includes context set
+            if not self.gp:
+                x_target = x_context + x_target
+                y_target = y_context + y_target
             R_target = self.encode_context_representation(x_target, y_target)
             q_zct = self.infer_latent_dist(R_target)
             # Sample z from posterior distribution q(z|c,t)
