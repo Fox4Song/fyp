@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from .mlp import MLP
+from .feedforward import FeedForward
 
 
 class Attention(nn.Module):
@@ -121,7 +122,7 @@ class Attention(nn.Module):
                 self.layer_norm1 = nn.LayerNorm(out_size)
                 self.layer_norm2 = nn.LayerNorm(out_size)
                 # Feed-Forward Network with an expansion factor of 4
-                self.ffn = MLP(out_size, out_size, hidden_size=4 * out_size)
+                self.ffn = FeedForward(out_size)
             self._reset_parameters()
 
         else:
