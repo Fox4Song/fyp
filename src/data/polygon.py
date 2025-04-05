@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 
-class Polygon(object):
+class Polygon:
     """
     Represents a convex polygon with its vertices, side lengths, and interior angles.
 
@@ -288,6 +288,7 @@ class PolygonSentenceReader(nn.Module):
         # Force the first token to be 1.
         mask = [1]
         for _ in range(token_length - 1):
+            # TODO: Need to mask less tokens
             mask.append(random.choice([0, 1]))
         # Ensure at least one token (besides the first) is masked.
         if all(m == 1 for m in mask[1:]):
@@ -313,9 +314,9 @@ class PolygonSentenceReader(nn.Module):
 
         return Polygon(vertices, lengths, angles)
 
-    def generate_masked_polygon_batch(self, num_context=None):
+    def generate_masked_polygon_batch_few_shot(self, num_context=None):
         """
-        Generates a batch of polygons
+        Generates a batch of polygons for Few-Shot Learning
 
         Returns
         -------
@@ -407,3 +408,74 @@ class PolygonSentenceReader(nn.Module):
             self.max_seq_len,
             num_context,
         )
+
+    def generate_masked_polygon_batch(self):
+        """
+        Generates a batch of masked polygon token sequences for masked language modelling
+        pretraining.
+
+        For each polygon:
+        - A tokenized sequence is generated.
+        - A random binary mask is produced (1: token kept, 0: token masked). The first token is always kept.
+        - The input sequence is created by replacing masked tokens with a special MASK token (here -1.0).
+        - The label sequence contains the original token for masked positions and 0.0 for unmasked positions.
+        - An additional mlm_mask tensor is produced indicating positions on which the loss should be computed (1 for masked positions, 0 otherwise).
+
+        Returns
+        -------
+        input_batch : torch.Tensor [B, max_seq_len]
+            Batch of masked input token sequences.
+
+        label_batch : torch.Tensor [B, max_seq_len]
+            Batch of label sequences containing original tokens for masked positions.
+
+        mlm_mask_batch : torch.Tensor [B, max_seq_len]
+            Batch of binary masks indicating masked token positions.
+        """
+
+        MASK_TOKEN = -1.0  # Special token value used to replace masked tokens
+        input_sequences = []
+        label_sequences = []
+        mlm_masks = []
+        attention_masks = []
+
+        for _ in range(self.batch_size):
+            # Generate a polygon and its tokenised sequence.
+            poly = self.generate_polygon()
+            tokens = poly.to_tokenised()
+
+            # Mask 15%
+            mask = torch.rand(len(tokens)) < 0.15
+
+            input_seq = []
+            label_seq = []
+            mlm_mask = []  # 1 if token is masked (loss is computed), else 0.
+
+            input_seq = [MASK_TOKEN if m else token for token, m in zip(tokens, mask)]
+            label_seq = [token if m else 0.0 for token, m in zip(tokens, mask)]
+            mlm_mask = [1 if m else 0 for m in mask]
+
+            # Pad sequences to fixed length self.max_seq_len.
+            if len(input_seq) < self.max_seq_len:
+                pad_length = self.max_seq_len - len(input_seq)
+                input_seq = input_seq + [0.0] * pad_length
+                label_seq = label_seq + [0.0] * pad_length
+                mlm_mask = mlm_mask + [0] * pad_length
+            else:
+                input_seq = input_seq[: self.max_seq_len]
+                label_seq = label_seq[: self.max_seq_len]
+                mlm_mask = mlm_mask[: self.max_seq_len]
+
+            attention_mask = [1 if token != 0.0 else 0 for token in input_seq]
+
+            input_sequences.append(torch.tensor(input_seq, dtype=torch.float))
+            label_sequences.append(torch.tensor(label_seq, dtype=torch.float))
+            mlm_masks.append(torch.tensor(mlm_mask, dtype=torch.float))
+            attention_masks.append(torch.tensor(attention_mask, dtype=torch.float))
+
+        input_batch = torch.stack(input_sequences)  # [B, max_seq_len]
+        label_batch = torch.stack(label_sequences)  # [B, max_seq_len]
+        mlm_mask_batch = torch.stack(mlm_masks)  # [B, max_seq_len]
+        attention_mask_batch = torch.stack(attention_masks)  # [B, max_seq_len]
+
+        return input_batch, label_batch, mlm_mask_batch, attention_mask_batch

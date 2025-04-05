@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from modules import PositionalEncoding
 
 
 class Transformer(nn.Module):
-    """Transformer model
+    """Transformer encoder model
 
     Parameters
     ----------
@@ -43,7 +44,7 @@ class Transformer(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=r_dim,
             nhead=encoder_heads,
-            dim_feedforward=r_dim,
+            dim_feedforward=r_dim * 4,
             dropout=0,
             batch_first=True,
         )
@@ -53,20 +54,65 @@ class Transformer(nn.Module):
 
         self.out = nn.Linear(r_dim, y_dim)
 
-    def forward(self, x_context, y_context, x_target):
-        n_x_target = x_target.size(1)
+        self.apply(self._reset_parameters)
 
-        # [batch_size, 2 * n_context + x_target, x_dim]
-        x = torch.cat([x_context, y_context, x_target], dim=1)
+    def _reset_parameters(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.xavier_normal_(module.weight)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
 
-        # [batch_size, 2 * n_context + n_target, x_dim]
-        R_c = self.project_r(x)
-        R_c = self.pos_encoder(R_c)
+    def forward(self, x, labels=None, mlm_mask=None, attention_mask=None):
+        """
+        Forward pass through the Transformer.
 
-        # [batch_size, 2 * n_context + n_target, x_dim]
-        R = self.encoder(R_c)
+        Parameters
+        ----------
+        x : torch.Tensor of shape [B, seq_len, 1]
+            Input token sequences.
 
-        # [batch_size, n_target, y_dim]
-        out = self.out(R[:, -n_x_target:, :])
+        labels : torch.Tensor of shape [B, seq_len, 1] (optional)
+            The original token values for masked positions (dummy values elsewhere).
 
-        return out
+        mlm_mask : torch.Tensor of shape [B, seq_len, 1] (optional)
+            Binary mask indicating which positions were masked (1 for masked, 0 for unmasked).
+
+        Returns
+        -------
+        dict
+            If labels and mlm_mask are provided, returns a dict with 'loss' and 'logits'.
+            Otherwise, returns a dict with 'logits'.
+        """
+
+        if x.dim() == 2:
+            x = x.unsqueeze(-1)
+
+        x = self.project_r(x)
+        x = self.pos_encoder(x)
+        x = self.encoder(x, src_key_padding_mask=(attention_mask == 0))
+        logits = self.out(x).squeeze(-1)
+
+        if labels is not None and mlm_mask is not None:
+            # Compute loss only on masked tokens.
+            loss = F.mse_loss(logits[mlm_mask == 1], labels[mlm_mask == 1])
+            return {"loss": loss, "logits": logits}
+
+        return {"logits": logits}
+
+    # def forward(self, x_context, y_context, x_target):
+    #     n_x_target = x_target.size(1)
+
+    #     # [batch_size, 2 * n_context + x_target, x_dim]
+    #     x = torch.cat([x_context, y_context, x_target], dim=1)
+
+    #     # [batch_size, 2 * n_context + n_target, x_dim]
+    #     R_c = self.project_r(x)
+    #     R_c = self.pos_encoder(R_c)
+
+    #     # [batch_size, 2 * n_context + n_target, x_dim]
+    #     R = self.encoder(R_c)
+
+    #     # [batch_size, n_target, y_dim]
+    #     out = self.out(R[:, -n_x_target:, :])
+
+    #     return out
