@@ -274,17 +274,8 @@ class PolygonSentenceReader(nn.Module):
             padded.append(torch.tensor(tokens, dtype=torch.float))
         return torch.stack(padded)
 
-    def generate_random_mask(self, token_length):
-        # Force the first token to be 1.
-        mask = [1]
-        for _ in range(token_length - 1):
-            # TODO: Need to mask less tokens
-            mask.append(random.choice([0, 1]))
-        # Ensure at least one token (besides the first) is masked.
-        if all(m == 1 for m in mask[1:]):
-            idx = random.randint(1, token_length - 1)
-            mask[idx] = 0
-        return mask
+    def _generate_random_mask(self, token_length, probability):
+        return torch.rand(token_length) < probability
 
     def generate_polygon(self, n=None):
         """
@@ -356,7 +347,8 @@ class PolygonSentenceReader(nn.Module):
             if self.testing:
                 mask = [1] * (1 + 3 * n) + [0] * (total_tokens - (1 + n))
             else:
-                mask = self.generate_random_mask(total_tokens)
+                # Mask 15%
+                mask = self._generate_random_mask(total_tokens, 0.15)
 
             context_x_list, context_y_list = [], []
 
@@ -364,12 +356,12 @@ class PolygonSentenceReader(nn.Module):
                 poly = self.generate_polygon(n)
                 tokens = poly.to_tokenised()
                 tokens_list.append(tokens)
-                cx = [t if m == 1 else -1.0 for t, m in zip(tokens, mask)]
+                cx = [MASK_TOKEN if m else t for t, m in zip(tokens, mask)]
                 cy = tokens
                 context_x_list.append(cx)
                 context_y_list.append(cy)
 
-            tx = [t if m == 1 else -1.0 for t, m in zip(tokens, mask)]
+            tx = [MASK_TOKEN if m else t for t, m in zip(tokens, mask)]
             ty = target_tokens
 
             # Pad each list into a tensor.
@@ -437,7 +429,7 @@ class PolygonSentenceReader(nn.Module):
             tokens = poly.to_tokenised()
 
             # Mask 15%
-            mask = torch.rand(len(tokens)) < 0.15
+            mask = self._generate_random_mask(len(tokens), 0.15)
 
             input_seq = []
             label_seq = []
