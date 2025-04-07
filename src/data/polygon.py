@@ -277,6 +277,9 @@ class PolygonSentenceReader(nn.Module):
     def _generate_random_mask(self, token_length, probability):
         return torch.rand(token_length) < probability
 
+    def _transform(context_x):
+        return context_x
+
     def generate_polygon(self, n=None):
         """
         Generates a polygon by constructing a convex polygon, computing its side lengths and interior angles.
@@ -361,7 +364,7 @@ class PolygonSentenceReader(nn.Module):
                 context_x_list.append(cx)
                 context_y_list.append(cy)
 
-            tx = [MASK_TOKEN if m else t for t, m in zip(tokens, mask)]
+            tx = [MASK_TOKEN if m else t for t, m in zip(target_tokens, mask)]
             ty = target_tokens
 
             # Pad each list into a tensor.
