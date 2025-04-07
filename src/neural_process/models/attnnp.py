@@ -142,6 +142,7 @@ class AttnLNP(LatentNeuralProcessFamily, AttnCNP):
         n_z = z.size(0)
 
         # [n_z, batch_size, n_target, z_dim]
+        z = z[:, :, -n_target:, :]
         z = z.expand(n_z, batch_size, n_target, self.z_dim)
 
         # [1, batch_size, n_target, r_dim]

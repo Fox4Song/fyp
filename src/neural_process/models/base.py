@@ -282,8 +282,8 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         if self.training and y_target is not None:
             # if Gaussian Process, then target set already includes context set
             if not self.gp:
-                x_target = x_context + x_target
-                y_target = y_context + y_target
+                x_target = torch.cat([x_context, x_target], dim=1)
+                y_target = torch.cat([y_context, y_target], dim=1)
             R_target = self.encode_context_representation(x_target, y_target)
             q_zct = self.infer_latent_dist(R_target)
             # Sample z from posterior distribution q(z|c,t)
