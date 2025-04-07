@@ -3,6 +3,8 @@ import math
 import torch
 import torch.nn as nn
 
+MASK_TOKEN = -1.0  # Special token value used to replace masked tokens
+
 
 class Polygon:
     """
@@ -97,7 +99,7 @@ class Polygon:
 class PolygonSentenceReader(nn.Module):
     """
     Creates a dataset of polygon sentences by generating convex polygons,
-    computing their side lengths and interior angles, and tokenizing the result
+    computing their side lengths and interior angles, and tokenising the result
     into a flat list.
 
     Each polygon sentence follows the grammar:
@@ -244,18 +246,6 @@ class PolygonSentenceReader(nn.Module):
             angles.append(math.degrees(angle_rad))
         return angles
 
-    def _process_sample(self, tokens, mask):
-        """
-        Given a tokenized polygon and its binary mask, returns context set split.
-        """
-        x, y = [], []
-        for token, m in zip(tokens, mask):
-            if m == 1:
-                x.append(token)
-            else:
-                y.append(token)
-        return x, y
-
     def _pad_batch(self, list_of_lists, pad_length):
         """
         Pads a list of token lists to a fixed length with zeros.
@@ -278,7 +268,7 @@ class PolygonSentenceReader(nn.Module):
             tokens = list(tokens)
             pad_len = pad_length - len(tokens)
             if pad_len > 0:
-                tokens = tokens + [0] * pad_len
+                tokens = tokens + [0.0] * pad_len
             else:
                 tokens = tokens[:pad_length]
             padded.append(torch.tensor(tokens, dtype=torch.float))
@@ -314,9 +304,12 @@ class PolygonSentenceReader(nn.Module):
 
         return Polygon(vertices, lengths, angles)
 
-    def generate_masked_polygon_batch_few_shot(self, num_context=None):
+    def generate_polygon_batch_few_shot_completion_task(self, num_context=None):
         """
-        Generates a batch of polygons for Few-Shot Learning
+        Gnerates a batch of Polygons for Few-Shot Completion Tasks
+
+        Given a partial derivation (e.g., only the SIDES),
+        predict missing components such as LENGTHS and/or ANGLES.
 
         Returns
         -------
@@ -359,13 +352,11 @@ class PolygonSentenceReader(nn.Module):
             target_tokens = target_poly.to_tokenised()
             total_tokens = len(target_tokens)
 
-            # For testing, use a deterministic mask (e.g., first half context, second half target)
+            # For testing, use a deterministic mask (e.g., mask only angles)
             if self.testing:
-                mask = [1] * (1 + 2 * n) + [0] * (total_tokens - (1 + 2 * n))
+                mask = [1] * (1 + 3 * n) + [0] * (total_tokens - (1 + n))
             else:
                 mask = self.generate_random_mask(total_tokens)
-            # Ensure first token is always context.
-            mask[0] = 1
 
             context_x_list, context_y_list = [], []
 
@@ -373,11 +364,13 @@ class PolygonSentenceReader(nn.Module):
                 poly = self.generate_polygon(n)
                 tokens = poly.to_tokenised()
                 tokens_list.append(tokens)
-                cx, cy = self._process_sample(tokens, mask)
+                cx = [t if m == 1 else -1.0 for t, m in zip(tokens, mask)]
+                cy = tokens
                 context_x_list.append(cx)
                 context_y_list.append(cy)
 
-            tx, ty = self._process_sample(target_tokens, mask)
+            tx = [t if m == 1 else -1.0 for t, m in zip(tokens, mask)]
+            ty = target_tokens
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
@@ -415,7 +408,7 @@ class PolygonSentenceReader(nn.Module):
         pretraining.
 
         For each polygon:
-        - A tokenized sequence is generated.
+        - A tokenised sequence is generated.
         - A random binary mask is produced (1: token kept, 0: token masked). The first token is always kept.
         - The input sequence is created by replacing masked tokens with a special MASK token (here -1.0).
         - The label sequence contains the original token for masked positions and 0.0 for unmasked positions.
@@ -433,7 +426,6 @@ class PolygonSentenceReader(nn.Module):
             Batch of binary masks indicating masked token positions.
         """
 
-        MASK_TOKEN = -1.0  # Special token value used to replace masked tokens
         input_sequences = []
         label_sequences = []
         mlm_masks = []
