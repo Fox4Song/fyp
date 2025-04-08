@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 
 MASK_TOKEN = -1.0  # Special token value used to replace masked tokens
+EOS_TOKEN = -2.0  # Special token value used to indicate the end of a sequence
 
 
 class Polygon:
@@ -65,7 +66,7 @@ class Polygon:
         return tokenised
 
     @classmethod
-    def from_tokenised(cls, tokenised):
+    def from_tokenised(cls, tokenised, n):
         """
         Creates a Polygon instance from a tokenised flat list.
 
@@ -78,7 +79,6 @@ class Polygon:
         Polygon
             A new instance of Polygon constructed from the tokenised data.
         """
-        n = int(tokenised[0])
         vertices_flat = tokenised[1 : 1 + 2 * n]
         vertices = []
         for i in range(0, len(vertices_flat), 2):
@@ -427,9 +427,14 @@ class PolygonSentenceReader(nn.Module):
         attention_masks = []
 
         for _ in range(self.batch_size):
-            # Generate a polygon and its tokenised sequence.
-            poly = self.generate_polygon()
-            tokens = poly.to_tokenised()
+            paragraph_tokens = []
+            # Generate several polygon sentences and separate them by EOS_TOKEN.
+            num_sentences = random.randint(3, self.max_num_context)
+            for _ in range(num_sentences):
+                poly = self.generate_polygon()
+                tokens = poly.to_tokenised()
+                paragraph_tokens.extend(tokens)
+                paragraph_tokens.append(EOS_TOKEN)
 
             # Mask 15%
             mask = self._generate_random_mask(len(tokens), 0.15)
