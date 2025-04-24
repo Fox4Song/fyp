@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from torch.distributions.kl import kl_divergence
 
@@ -64,3 +65,33 @@ class ELBOLoss(nn.Module):
         kl_loss = kl_loss.mean(dim=0).mean()
 
         return nll_loss + kl_loss
+
+
+class MSELoss(nn.Module):
+    """Computes the mean squared error loss
+
+    Parameters
+    ----------
+    reduction : str (optional)
+        Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.
+        Default: 'mean'
+    """
+
+    def __init__(self, reduction="mean"):
+        super().__init__()
+        self.reduction = reduction
+
+    def forward(self, y_pred, y_target, mask=None):
+
+        if mask is not None:
+            mse = F.mse_loss(y_pred, y_target, reduction="none")
+            mask = mask.bool()
+            loss = mse[mask]
+            if self.reduction == "sum":
+                loss = loss.sum()
+            elif self.reduction == "mean":
+                loss = loss.mean()
+        else:
+            loss = F.mse_loss(y_pred, y_target, reduction=self.reduction)
+
+        return loss
