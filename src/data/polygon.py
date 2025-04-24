@@ -73,6 +73,10 @@ class Polygon:
         Parameters
         ----------
         tokenised : list
+            The tokenised representation of the polygon.
+
+        n : int
+            The number of sides (vertices) of the polygon.
 
         Returns
         -------
@@ -275,10 +279,114 @@ class PolygonSentenceReader(nn.Module):
         return torch.stack(padded)
 
     def _generate_random_mask(self, token_length, probability):
-        return torch.rand(token_length) < probability
+        mask = torch.rand(token_length) < probability
+        mask = mask.to(torch.int)
+        return mask
 
-    def _transform(context_x):
-        return context_x
+    def _sample_random_transformation(self, t_type=None):
+        """
+        Samples a random transformation type and its parameters.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the transformation type and its parameters.
+            The transformation type is one of "rotation", "scaling", or "translation".
+            The parameters are a dictionary with the necessary values for the transformation.
+        """
+        if not t_type:
+            t_type = random.choice(["rotation", "scaling", "translation"])
+
+        if t_type == "rotation":
+            params = {"angle": random.uniform(15, 180)}
+        elif t_type == "scaling":
+            params = {
+                "scale_x": random.uniform(0.5, 1.5),
+                "scale_y": random.uniform(0.5, 1.5),
+            }
+        elif t_type == "translation":
+            params = {"dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)}
+        else:
+            raise ValueError("Unknown Transformation Type")
+
+        return t_type, params
+
+    def _transform_polygon(self, polygon, t_type=None, parameters=None):
+        """
+        Applies a transformation to the given polygon.
+
+        Parameters
+        ----------
+        polygon : Polygon
+            The original polygon to transform.
+
+        t_type : str (optional)
+            The type of transformation ("rotation", "scaling", or "translation").
+            If None, a transformation is chosen at random.
+
+        parameters : dict (optional)
+            Parameters for the transformation. The expected keys depend on the transformation type:
+            - "rotation": {"angle": float} (degrees)
+            - "scaling": {"scale_x": float, "scale_y": float}
+            - "translation": {"dx": float, "dy": float}
+
+        Returns
+        -------
+        transformed_polygon : Polygon
+            The polygon after applying the transformation.
+        """
+        if t_type is None:
+            t_type = random.choice(["rotation", "scaling", "translation"])
+
+        if t_type == "rotation":
+            # Rotate around the polygon's centroid.
+            if parameters is None:
+                angle = random.uniform(15, 180)  # degrees
+            else:
+                angle = parameters["angle"]
+            angle_rad = math.radians(angle)
+            cx = sum(v[0] for v in polygon.vertices) / polygon.n
+            cy = sum(v[1] for v in polygon.vertices) / polygon.n
+            new_vertices = []
+            for x, y in polygon.vertices:
+                new_x = (
+                    cx + math.cos(angle_rad) * (x - cx) - math.sin(angle_rad) * (y - cy)
+                )
+                new_y = (
+                    cy + math.sin(angle_rad) * (x - cx) + math.cos(angle_rad) * (y - cy)
+                )
+                new_vertices.append((round(new_x, 2), round(new_y, 2)))
+        elif t_type == "scaling":
+            # Scale around the polygon's centroid.
+            if parameters is None:
+                scalex = random.uniform(0.5, 1.5)
+                scaley = random.uniform(0.5, 1.5)
+            else:
+                scalex = parameters["scale_x"]
+                scaley = parameters["scale_y"]
+            cx = sum(v[0] for v in polygon.vertices) / polygon.n
+            cy = sum(v[1] for v in polygon.vertices) / polygon.n
+            new_vertices = []
+            for x, y in polygon.vertices:
+                new_x = cx + scalex * (x - cx)
+                new_y = cy + scaley * (y - cy)
+                new_vertices.append((round(new_x, 2), round(new_y, 2)))
+        elif t_type == "translation":
+            # Translate by a random vector.
+            if parameters is None:
+                dx = random.uniform(-2, 2)
+                dy = random.uniform(-2, 2)
+            else:
+                dx = parameters["dx"]
+                dy = parameters["dy"]
+            new_vertices = [
+                (round(x + dx, 2), round(y + dy, 2)) for (x, y) in polygon.vertices
+            ]
+
+        new_lengths = self._compute_side_lengths(new_vertices)
+        new_angles = self._compute_interior_angles(new_vertices)
+        transformed_polygon = Polygon(new_vertices, new_lengths, new_angles)
+        return transformed_polygon
 
     def generate_polygon(self, n=None):
         """
@@ -324,12 +432,16 @@ class PolygonSentenceReader(nn.Module):
 
         num_context : int
             Number of context points in the batch.
+
+        context_masks : torch.Tensor [B, max_seq_len]
+            The mask for the context points, where 1 indicates a masked point and 0 indicates an unmasked point.
         """
 
         if num_context is None:
             num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
 
         context_x, context_y = [], []
+        context_masks = []
         target_x, target_y = [], []
         total_tokens_list = []
         true_target_polygons = []
@@ -348,10 +460,24 @@ class PolygonSentenceReader(nn.Module):
 
             # For testing, use a deterministic mask (e.g., mask only angles)
             if self.testing:
-                mask = [1] * (1 + 3 * n) + [0] * (total_tokens - (1 + n))
+                mask = [0] * (1 + 3 * n) + [1] * (total_tokens - (1 + 3 * n))
+                # Hide vertices for visualisation
+                # mask = [0]
+                # for vert_idx in range(n):
+                #     if vert_idx % 2 == 0:
+                #         # hide both x and y of this vertex
+                #         mask.extend([1, 1])
+                #     else:
+                #         # keep both x and y
+                #         mask.extend([0, 0])
+                # rest = total_tokens - len(mask)
+                # mask.extend([0] * rest)
             else:
                 # Mask 15%
                 mask = self._generate_random_mask(total_tokens, 0.15)
+                mask = mask.tolist()
+            # TODO: REMOVE
+            mask = [0] * (1 + 3 * n) + [1] * (total_tokens - (1 + 3 * n))
 
             context_x_list, context_y_list = [], []
 
@@ -359,12 +485,120 @@ class PolygonSentenceReader(nn.Module):
                 poly = self.generate_polygon(n)
                 tokens = poly.to_tokenised()
                 tokens_list.append(tokens)
-                cx = [MASK_TOKEN if m else t for t, m in zip(tokens, mask)]
-                cy = tokens
+                cx = [MASK_TOKEN if m == 1 else t for t, m in zip(tokens, mask)]
                 context_x_list.append(cx)
-                context_y_list.append(cy)
+                context_y_list.append(tokens)
 
-            tx = [MASK_TOKEN if m else t for t, m in zip(target_tokens, mask)]
+            tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
+            ty = target_tokens
+
+            # Pad each list into a tensor.
+            context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
+            context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
+            target_x_pad = self._pad_batch([tx], self.max_seq_len)
+            target_y_pad = self._pad_batch([ty], self.max_seq_len)
+            context_mask = self._pad_batch([mask], self.max_seq_len)
+
+            context_x.append(context_x_pad)
+            context_y.append(context_y_pad)
+            target_x.append(target_x_pad)
+            target_y.append(target_y_pad)
+            context_masks.append(context_mask)
+            total_tokens_list.append(total_tokens)
+            true_target_polygons.append(target_poly)
+
+        # Stack individual samples to create batch tensors.
+        context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
+        context_y = torch.stack(context_y)
+        target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
+        target_y = torch.stack(target_y)
+        context_masks = torch.stack(context_masks)  # [B, 1, max_seq_len]
+
+        return (
+            context_x,
+            context_y,
+            target_x,
+            target_y,
+            total_tokens_list,
+            true_target_polygons,
+            self.max_seq_len,
+            num_context,
+            context_masks,
+        )
+
+    def generate_polygon_batch_few_shot_transformation_task(
+        self, num_context=None, transformation_type=None
+    ):
+        """
+        Gnerates a batch of Polygons for Few-Shot Transformation Tasks
+
+        Rotate, scale, or translate a polygon and predict
+        the new properties
+
+        Returns
+        -------
+        context_x : torch.Tensor [B, num_context, x_size]
+            The x values of the context points
+
+        context_y : torch.Tensor [B, num_context, y_size]
+            The y values of the context points
+
+        target_x : torch.Tensor [B, num_target, x_size]
+            The x values of the target points
+
+        target_y : torch.Tensor [B, num_target, y_size]
+            The y values of the target points
+
+        max_total_tokens : int
+            Maximum number of tokens (after padding) in the batch.
+
+        num_context : int
+            Number of context points in the batch.
+        """
+
+        if num_context is None:
+            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+
+        context_x, context_y = [], []
+        target_x, target_y = [], []
+        total_tokens_list = []
+        true_target_polygons = []
+
+        for _ in range(self.batch_size):
+
+            tokens_list = []
+
+            # Choose a fixed number of sides for this sample
+            n = random.randint(self.min_num_sides, self.max_num_sides)
+
+            # Sample random transformation
+            transformation_type, params = self._sample_random_transformation(
+                transformation_type
+            )
+
+            # Generate the target polygon and its tokenised form.
+            target_poly = self.generate_polygon(n)
+            transformed_poly = self._transform_polygon(
+                target_poly, transformation_type, params
+            )
+            target_tokens = target_poly.to_tokenised()
+            target_trans_tokens = transformed_poly.to_tokenised()
+            total_tokens = len(target_trans_tokens)
+
+            context_x_list, context_y_list = [], []
+
+            for _ in range(num_context):
+                poly = self.generate_polygon(n)
+                tokens = poly.to_tokenised()
+                tokens_list.append(tokens)
+                transformed_context_poly, _ = self._transform_polygon(
+                    poly, transformation_type, params
+                )
+                transformed_tokens_context = transformed_context_poly.to_tokenised()
+                context_x_list.append(tokens)
+                context_y_list.append(transformed_tokens_context)
+
+            tx = target_tokens
             ty = target_tokens
 
             # Pad each list into a tensor.
