@@ -705,3 +705,60 @@ class PolygonSentenceReader(nn.Module):
         attention_mask_batch = torch.stack(attention_masks)  # [B, max_seq_len]
 
         return input_batch, label_batch, mlm_mask_batch, attention_mask_batch
+
+    def generate_causal_polygon_batch(self):
+        """
+        Generates a batch of token sequences for next-token (causal) language modeling.
+
+        Returns
+        -------
+        input_batch : torch.Tensor [B, max_seq_len]
+            Batch of input token sequences (each shifted right by one from label_seq).
+
+        label_batch : torch.Tensor [B, max_seq_len]
+            Batch of target token sequences (the “next” token at each position).
+
+        attention_mask_batch : torch.Tensor [B, max_seq_len]
+            Binary mask (1 for real tokens in input_seq, 0 for padding).
+        """
+
+        input_sequences = []
+        label_sequences = []
+        attention_masks = []
+
+        for _ in range(self.batch_size):
+            # Build a long token list by concatenating several polygons + EOS
+            paragraph_tokens = []
+            num_sentences = random.randint(3, self.max_num_context)
+            for _ in range(num_sentences):
+                poly = self.generate_polygon()
+                tokens = poly.to_tokenised()
+                paragraph_tokens.extend(tokens)
+                paragraph_tokens.append(EOS_TOKEN)
+
+            # Enforce length = max_seq_len + 1 via truncation or padding
+            total_len = self.max_seq_len + 1
+            if len(paragraph_tokens) >= total_len:
+                seq = paragraph_tokens[:total_len]
+            else:
+                pad_len = total_len - len(paragraph_tokens)
+                seq = paragraph_tokens + [0.0] * pad_len  # assume 0.0 is pad token
+
+            # Split into input / label
+            input_seq = seq[:-1]  # length = max_seq_len
+            label_seq = seq[1:]  # length = max_seq_len
+
+            # Attention mask for padding in input_seq
+            attention_mask = [1 if tok != 0.0 else 0 for tok in input_seq]
+
+            # Collect as tensors
+            input_sequences.append(torch.tensor(input_seq, dtype=torch.float))
+            label_sequences.append(torch.tensor(label_seq, dtype=torch.float))
+            attention_masks.append(torch.tensor(attention_mask, dtype=torch.float))
+
+        # Stack into [B, max_seq_len]
+        input_batch = torch.stack(input_sequences)
+        label_batch = torch.stack(label_sequences)
+        attention_mask_batch = torch.stack(attention_masks)
+
+        return input_batch, label_batch, attention_mask_batch
