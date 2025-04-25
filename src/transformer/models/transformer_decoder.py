@@ -33,7 +33,14 @@ class TransformerDecoder(nn.Module):
     """
 
     def __init__(
-        self, x_dim, y_dim, r_dim=128, decoder_layers=2, decoder_heads=8, **kwargs
+        self,
+        x_dim,
+        y_dim,
+        r_dim=256,
+        decoder_layers=2,
+        decoder_heads=8,
+        dropout=0.1,
+        **kwargs
     ):
         super().__init__()
 
@@ -48,6 +55,7 @@ class TransformerDecoder(nn.Module):
             d_model=r_dim,
             nhead=decoder_heads,
             dim_feedforward=r_dim * 4,
+            dropout=dropout,
             **kwargs,
         )
 
