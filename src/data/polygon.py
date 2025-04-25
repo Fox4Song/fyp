@@ -63,11 +63,11 @@ class Polygon:
         """
         tokenised = [self.n, SEP_VERTS]
         for x, y in self.vertices:
-            tokenised.extend([round(x, 3), round(y, 3)])
+            tokenised.extend([x, y])
         tokenised.append(SEP_LENS)
-        tokenised.extend([round(l, 3) for l in self.lengths])
+        tokenised.extend(self.lengths)
         tokenised.append(SEP_ANGS)
-        tokenised.extend([round(a, 2) for a in self.angles])
+        tokenised.extend(self.angles)
         tokenised.append(EOS_TOKEN)
         return tokenised
 
@@ -413,11 +413,11 @@ class PolygonSentenceReader(nn.Module):
 
         return Polygon(vertices, lengths, angles)
 
-    def generate_polygon_batch_few_shot_completion_task(self, num_context=None):
+    def generate_polygon_batch_few_shot_masked_completion_task(self, num_context=None):
         """
-        Gnerates a batch of Polygons for Few-Shot Completion Tasks
+        Gnerates a batch of Polygons for Few-Shot Masked Completion Tasks
 
-        Given a partial derivation (e.g., only the SIDES),
+        Given a partial derivation (e.g., masked SIDE, LENGTH, ANGLE, etc.),
         predict missing components such as LENGTHS and/or ANGLES.
 
         Returns
@@ -467,7 +467,7 @@ class PolygonSentenceReader(nn.Module):
 
             # For testing, use a deterministic mask (e.g., mask only angles)
             if self.testing:
-                mask = [0] * (1 + 3 * n) + [1] * (total_tokens - (1 + 3 * n))
+                mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
                 # Hide vertices for visualisation
                 # mask = [0]
                 # for vert_idx in range(n):
@@ -484,7 +484,7 @@ class PolygonSentenceReader(nn.Module):
                 mask = self._generate_random_mask(total_tokens, 0.15)
                 mask = mask.tolist()
             # TODO: REMOVE
-            mask = [0] * (1 + 3 * n) + [1] * (total_tokens - (1 + 3 * n))
+            mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
 
             context_x_list, context_y_list = [], []
 
@@ -531,6 +531,104 @@ class PolygonSentenceReader(nn.Module):
             self.max_seq_len,
             num_context,
             context_masks,
+        )
+
+    def generate_polygon_batch_few_shot_completion_task(self, num_context=None):
+        """
+        Gnerates a batch of Polygons for Few-Shot Completion Tasks
+
+        Given a partial derivation (without ONE component e.g the SIDES),
+        predict missing components such as LENGTHS and/or ANGLES.
+
+        Returns
+        -------
+        context_x : torch.Tensor [B, num_context, x_size]
+            The x values of the context points
+
+        context_y : torch.Tensor [B, num_context, y_size]
+            The y values of the context points
+
+        target_x : torch.Tensor [B, num_target, x_size]
+            The x values of the target points
+
+        target_y : torch.Tensor [B, num_target, y_size]
+            The y values of the target points
+
+        max_total_tokens : int
+            Maximum number of tokens (after padding) in the batch.
+
+        num_context : int
+            Number of context points in the batch.
+        """
+
+        if num_context is None:
+            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+
+        context_x, context_y = [], []
+        target_x, target_y = [], []
+        total_tokens_list = []
+        true_target_polygons = []
+
+        for _ in range(self.batch_size):
+
+            tokens_list = []
+
+            # Choose a fixed number of sides for this sample
+            n = random.randint(self.min_num_sides, self.max_num_sides)
+
+            # Generate the target polygon and its tokenised form.
+            target_poly = self.generate_polygon(n)
+            target_tokens = target_poly.to_tokenised()
+            total_tokens = len(target_tokens)
+
+            context_x_list, context_y_list = [], []
+
+            for _ in range(num_context):
+                poly = self.generate_polygon(n)
+                tokens = poly.to_tokenised()
+                tokens_list.append(tokens)
+
+                # Split tokens into context_x and context_y
+                # - context_x contains the polygon sequence up to and including <SEP_ANG>
+                # - context_y contains the polygon sequence representing the angles
+                cx = tokens[: 4 + 3 * n]
+                cy = tokens[4 + 3 * n : -1]
+
+                context_x_list.append(cx)
+                context_y_list.append(cy)
+
+            tx = target_tokens[: 4 + 3 * n]
+            ty = target_tokens[4 + 3 * n : -1]
+
+            # Pad each list into a tensor.
+            context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
+            y_size = (self.max_seq_len - 4) // 3
+            context_y_pad = self._pad_batch(context_y_list, y_size)
+            target_x_pad = self._pad_batch([tx], self.max_seq_len)
+            target_y_pad = self._pad_batch([ty], y_size)
+
+            context_x.append(context_x_pad)
+            context_y.append(context_y_pad)
+            target_x.append(target_x_pad)
+            target_y.append(target_y_pad)
+            total_tokens_list.append(total_tokens)
+            true_target_polygons.append(target_poly)
+
+        # Stack individual samples to create batch tensors.
+        context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
+        context_y = torch.stack(context_y)
+        target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
+        target_y = torch.stack(target_y)
+
+        return (
+            context_x,
+            context_y,
+            target_x,
+            target_y,
+            total_tokens_list,
+            true_target_polygons,
+            self.max_seq_len,
+            num_context,
         )
 
     def generate_polygon_batch_few_shot_transformation_task(
