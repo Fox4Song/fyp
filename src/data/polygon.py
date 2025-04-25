@@ -3,8 +3,11 @@ import math
 import torch
 import torch.nn as nn
 
-MASK_TOKEN = -1.0  # Special token value used to replace masked tokens
-EOS_TOKEN = -2.0  # Special token value used to indicate the end of a sequence
+SEP_VERTS = -1.0  # Special token to mark start of vertex sequence
+SEP_LENS = -2.0  # Special token to mark start of length sequence
+SEP_ANGS = -3.0  # Special token to mark start of angle sequence
+EOS_TOKEN = -4.0  # Special token value used to indicate the end of a sequence
+MASK_TOKEN = -5.0  # Special token value used to replace masked tokens
 
 
 class Polygon:
@@ -21,7 +24,7 @@ class Polygon:
     -------
     to_tokenised():
         Converts the polygon data into a tokenised flat list in the format:
-            [n, x1, y1, x2, y2, ..., xn, yn, L1, L2, ..., Ln, A1, A2, ..., An].
+            [n, <VERTS>, x1, y1, x2, y2, ..., xn, yn, <LENS>, L1, L2, ..., Ln, <ANGS>, A1, A2, ..., An].
 
     from_tokenised(tokenised):
         Class method that creates a Polygon instance from a tokenised flat list.
@@ -58,11 +61,14 @@ class Polygon:
         list
             The tokenised representation of the polygon.
         """
-        tokenised = [self.n]
+        tokenised = [self.n, SEP_VERTS]
         for x, y in self.vertices:
             tokenised.extend([round(x, 3), round(y, 3)])
+        tokenised.append(SEP_LENS)
         tokenised.extend([round(l, 3) for l in self.lengths])
+        tokenised.append(SEP_ANGS)
         tokenised.extend([round(a, 2) for a in self.angles])
+        tokenised.append(EOS_TOKEN)
         return tokenised
 
     @classmethod
@@ -83,12 +89,13 @@ class Polygon:
         Polygon
             A new instance of Polygon constructed from the tokenised data.
         """
-        vertices_flat = tokenised[1 : 1 + 2 * n]
-        vertices = []
-        for i in range(0, len(vertices_flat), 2):
-            vertices.append((vertices_flat[i], vertices_flat[i + 1]))
-        lengths = tokenised[1 + 2 * n : 1 + 3 * n]
-        angles = tokenised[1 + 3 * n :]
+        vertices_flat = tokenised[2 : 2 + 2 * n]
+        vertices = [
+            (vertices_flat[i], vertices_flat[i + 1])
+            for i in range(0, len(vertices_flat), 2)
+        ]
+        lengths = tokenised[3 + 2 * n : 3 + 3 * n]
+        angles = tokenised[4 + 3 * n : -1]
         return cls(vertices, lengths, angles)
 
     def __repr__(self):
@@ -668,7 +675,6 @@ class PolygonSentenceReader(nn.Module):
                 poly = self.generate_polygon()
                 tokens = poly.to_tokenised()
                 paragraph_tokens.extend(tokens)
-                paragraph_tokens.append(EOS_TOKEN)
 
             # Mask 15%
             mask = self._generate_random_mask(len(tokens), 0.15)
@@ -734,7 +740,6 @@ class PolygonSentenceReader(nn.Module):
                 poly = self.generate_polygon()
                 tokens = poly.to_tokenised()
                 paragraph_tokens.extend(tokens)
-                paragraph_tokens.append(EOS_TOKEN)
 
             # Enforce length = max_seq_len + 1 via truncation or padding
             total_len = self.max_seq_len + 1
