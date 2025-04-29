@@ -832,9 +832,9 @@ class PolygonSentenceReader(nn.Module):
 
         for _ in range(self.batch_size):
             # Build a long token list by concatenating several polygons + EOS
+            target_len = random.randint(256, self.max_seq_len + 1)
             paragraph_tokens = []
-            num_sentences = random.randint(3, self.max_num_context)
-            for _ in range(num_sentences):
+            while len(paragraph_tokens) < target_len:
                 poly = self.generate_polygon()
                 tokens = poly.to_tokenised()
                 paragraph_tokens.extend(tokens)
