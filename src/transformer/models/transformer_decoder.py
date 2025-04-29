@@ -86,14 +86,17 @@ class TransformerDecoder(nn.Module):
         )
         return mask.bool()
 
-    def forward(self, src, return_logits=True):
+    def forward(self, src, src_key_padding_mask=None, return_logits=True):
         """
         Parameters
         ----------
         src: torch.LongTensor
             Input sequence of shape (seq_len, batch, x_dim)
 
-        return_logits: bool
+        src_key_padding_mask: Tensor (optional)
+            Shape (batch, seq_len), True for positions that should be masked (i.e. padding)
+
+        return_logits: bool (optional)
             If True, return logits instead of probabilities
 
         Returns
@@ -111,7 +114,9 @@ class TransformerDecoder(nn.Module):
         causal_mask = self._generate_causal_mask(seq_len)  # (seq_len, seq_len)
 
         # run through the stack of self-attention blocks
-        hidden = self.transformer(x, mask=causal_mask)  # (seq_len, batch, r_dim)
+        hidden = self.transformer(
+            x, mask=causal_mask, src_key_padding_mask=src_key_padding_mask
+        )  # (seq_len, batch, r_dim)
 
         logits = self.fc_out(hidden)  # (seq_len, batch, y_dim)
         return logits if return_logits else torch.softmax(logits, dim=-1)
