@@ -19,7 +19,7 @@ MIN_LR = 1e-6
 max_seq_len = 512
 min_num_sides = 3
 max_num_sides = 8
-max_num_context = 10 # dummy for reader
+max_num_context = 10  # dummy for reader
 
 criterion = MSELoss()
 
@@ -36,16 +36,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # --- Model & optimizer ---
 x_dim, y_dim = 1, 1
-model = TransformerDecoder(x_dim, y_dim, r_dim=512, decoder_layers=2, decoder_heads=8).to(device)
+model = TransformerDecoder(
+    x_dim, y_dim, r_dim=512, decoder_layers=2, decoder_heads=8
+).to(device)
 total_params = sum(p.numel() for p in model.parameters())
 print(f"Total parameters: {total_params:,}")
 
 optimizer = optim.AdamW(model.parameters(), lr=INITIAL_LR, weight_decay=1e-2)
-scheduler = CosineAnnealingLR(
-    optimizer,
-    T_max=TRAINING_ITERATIONS,
-    eta_min=MIN_LR
-)
+scheduler = CosineAnnealingLR(optimizer, T_max=TRAINING_ITERATIONS, eta_min=MIN_LR)
 
 # --- Training Loop ---
 model.train()
@@ -89,16 +87,20 @@ for it in range(TRAINING_ITERATIONS + 1):
     if it % LOG_INTERVAL == 0 and it > 0:
         avg_loss = running_loss / LOG_INTERVAL
         lr = scheduler.get_last_lr()[0]
-        print(f"[{it:6d}/{TRAINING_ITERATIONS}] "
-              f"lr={lr:.2e}  avg_loss={avg_loss:.4f}")
+        print(
+            f"[{it:6d}/{TRAINING_ITERATIONS}] " f"lr={lr:.2e}  avg_loss={avg_loss:.4f}"
+        )
         running_loss = 0.0
 
 final_checkpoint_path = f"final_decoder_tf_model_{max_seq_len}_dim_min_{min_num_sides}_max_{max_num_sides}_sides.pt"
-torch.save({
-    'iteration': TRAINING_ITERATIONS,
-    'model_state_dict': model.state_dict(),
-    'optimizer_state_dict': optimizer.state_dict(),
-    'scheduler_state_dict': scheduler.state_dict(),
-    'loss': loss.item(),
-}, final_checkpoint_path)
+torch.save(
+    {
+        "iteration": TRAINING_ITERATIONS,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": scheduler.state_dict(),
+        "loss": loss.item(),
+    },
+    final_checkpoint_path,
+)
 print("Training complete. Final model checkpoint saved to", final_checkpoint_path)
