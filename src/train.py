@@ -92,7 +92,7 @@ for it in range(TRAINING_ITERATIONS + 1):
         )
         running_loss = 0.0
 
-final_checkpoint_path = f"final_decoder_tf_model_{max_seq_len}_dim_min_{min_num_sides}_max_{max_num_sides}_sides.pt"
+final_checkpoint_path = f"final_decoder_tf_model_{max_seq_len}_maxseqlen_min_{min_num_sides}_max_{max_num_sides}_sides.pt"
 torch.save(
     {
         "iteration": TRAINING_ITERATIONS,
