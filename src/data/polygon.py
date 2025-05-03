@@ -362,7 +362,7 @@ class PolygonSentenceReader(nn.Module):
                 new_y = (
                     cy + math.sin(angle_rad) * (x - cx) + math.cos(angle_rad) * (y - cy)
                 )
-                new_vertices.append((round(new_x, 2), round(new_y, 2)))
+                new_vertices.append((new_x, new_y))
         elif t_type == "scaling":
             # Scale around the polygon's centroid.
             if parameters is None:
@@ -377,7 +377,7 @@ class PolygonSentenceReader(nn.Module):
             for x, y in polygon.vertices:
                 new_x = cx + scalex * (x - cx)
                 new_y = cy + scaley * (y - cy)
-                new_vertices.append((round(new_x, 2), round(new_y, 2)))
+                new_vertices.append((new_x, new_y))
         elif t_type == "translation":
             # Translate by a random vector.
             if parameters is None:
@@ -386,9 +386,7 @@ class PolygonSentenceReader(nn.Module):
             else:
                 dx = parameters["dx"]
                 dy = parameters["dy"]
-            new_vertices = [
-                (round(x + dx, 2), round(y + dy, 2)) for (x, y) in polygon.vertices
-            ]
+            new_vertices = [(x + dx, y + dy) for (x, y) in polygon.vertices]
 
         new_lengths = self._compute_side_lengths(new_vertices)
         new_angles = self._compute_interior_angles(new_vertices)
@@ -705,7 +703,7 @@ class PolygonSentenceReader(nn.Module):
                 context_y_list.append(transformed_tokens_context)
 
             tx = target_tokens
-            ty = target_tokens
+            ty = target_trans_tokens
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
