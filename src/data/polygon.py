@@ -668,6 +668,7 @@ class PolygonSentenceReader(nn.Module):
         target_x, target_y = [], []
         total_tokens_list = []
         true_target_polygons = []
+        true_transformed_polygons = []
 
         for _ in range(self.batch_size):
 
@@ -696,7 +697,7 @@ class PolygonSentenceReader(nn.Module):
                 poly = self.generate_polygon(n)
                 tokens = poly.to_tokenised()
                 tokens_list.append(tokens)
-                transformed_context_poly, _ = self._transform_polygon(
+                transformed_context_poly = self._transform_polygon(
                     poly, transformation_type, params
                 )
                 transformed_tokens_context = transformed_context_poly.to_tokenised()
@@ -718,6 +719,7 @@ class PolygonSentenceReader(nn.Module):
             target_y.append(target_y_pad)
             total_tokens_list.append(total_tokens)
             true_target_polygons.append(target_poly)
+            true_transformed_polygons.append(transformed_poly)
 
         # Stack individual samples to create batch tensors.
         context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
@@ -732,6 +734,7 @@ class PolygonSentenceReader(nn.Module):
             target_y,
             total_tokens_list,
             true_target_polygons,
+            true_transformed_polygons,
             self.max_seq_len,
             num_context,
         )
