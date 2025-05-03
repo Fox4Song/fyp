@@ -37,7 +37,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # --- Model & optimizer ---
 x_dim, y_dim = 1, 1
 model = TransformerDecoder(
-    x_dim, y_dim, r_dim=512, decoder_layers=2, decoder_heads=8
+    x_dim, y_dim, r_dim=128, decoder_layers=2, decoder_heads=8
 ).to(device)
 total_params = sum(p.numel() for p in model.parameters())
 print(f"Total parameters: {total_params:,}")
