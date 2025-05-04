@@ -144,7 +144,7 @@ class PolygonSentenceReader(nn.Module):
         min_num_sides,
         max_num_sides,
         center=(5, 5),
-        radius=4,
+        radius=3,
         testing=False,
     ):
         super(PolygonSentenceReader, self).__init__()
