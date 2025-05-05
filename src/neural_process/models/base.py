@@ -274,10 +274,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
 
     def encode_latent(self, x_context, y_context, R, x_target, y_target):
 
-        # [batch_size, n_lat, z_dim]
-        R_input = self.rep_to_lat_input(R)
-
-        q_zc = self.infer_latent_dist(R_input)
+        q_zc = self.infer_latent_dist(R)
 
         if self.training and y_target is not None:
             # if Gaussian Process, then target set already includes context set
@@ -314,6 +311,9 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         q_zc : torch.distributions.Distribution [batch_size, n_lat, z_dim]
             Inferred latent distribution
         """
+
+        # [batch_size, n_lat, z_dim]
+        R = self.rep_to_lat_input(R)
 
         batch_size, n_lat, _ = R.shape
 
