@@ -1,5 +1,7 @@
 import random
 import math
+from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.errors import GEOSException
 import torch
 import torch.nn as nn
 
@@ -432,6 +434,9 @@ class PolygonSentenceReader(nn.Module):
         target_y : torch.Tensor [B, num_target, y_size]
             The y values of the target points
 
+        true_target_polygons : list
+            List of true target polygons.
+
         max_total_tokens : int
             Maximum number of tokens (after padding) in the batch.
 
@@ -552,6 +557,9 @@ class PolygonSentenceReader(nn.Module):
         target_y : torch.Tensor [B, num_target, y_size]
             The y values of the target points
 
+        true_target_polygons : list
+            List of true target polygons.
+
         max_total_tokens : int
             Maximum number of tokens (after padding) in the batch.
 
@@ -638,6 +646,12 @@ class PolygonSentenceReader(nn.Module):
         Rotate, scale, or translate a polygon and predict
         the new properties
 
+        Parameters
+        ----------
+        transformation_type : str
+            The type of transformation to apply to the polygon.
+            Can be one of 'rotation', 'translation', or 'scaling'.
+
         Returns
         -------
         context_x : torch.Tensor [B, num_context, x_size]
@@ -651,6 +665,12 @@ class PolygonSentenceReader(nn.Module):
 
         target_y : torch.Tensor [B, num_target, y_size]
             The y values of the target points
+
+        true_target_polygons : list
+            List of true target polygons.
+
+        true_transformed_polygons : list
+            List of true transformed polygons.
 
         max_total_tokens : int
             Maximum number of tokens (after padding) in the batch.
@@ -733,6 +753,151 @@ class PolygonSentenceReader(nn.Module):
             total_tokens_list,
             true_target_polygons,
             true_transformed_polygons,
+            self.max_seq_len,
+            num_context,
+        )
+
+    def generate_polygon_batch_few_shot_composition_task(
+        self, num_context=None, operation_type=None
+    ):
+        """
+        Few-shot composition tasks with resampling on invalid compositions:
+        - Ensures composed shape is a single, valid, non-empty Polygon.
+
+        Parameters
+        ----------
+        operation_type : str
+            The type of operation to apply to the polygons.
+            Can be one of 'union', 'intersection'.
+
+        Returns
+        -------
+        context_x : torch.Tensor [B, num_context, x_size]
+            The x values of the context points
+
+        context_y : torch.Tensor [B, num_context, y_size]
+            The y values of the context points
+
+        target_x : torch.Tensor [B, num_target, x_size]
+            The x values of the target points
+
+        target_y : torch.Tensor [B, num_target, y_size]
+            The y values of the target points
+
+        true_target_polygons : list
+            List of true target polygons.
+
+        max_total_tokens : int
+            Maximum number of tokens (after padding) in the batch.
+
+        num_context : int
+            Number of context points in the batch.
+        """
+        if num_context is None:
+            num_context = torch.randint(3, self.max_num_context + 1, (1,)).item()
+
+        all_ctx_x, all_ctx_y = [], []
+        all_qx, all_qy = [], []
+        total_tokens_list = []
+        true_target_polygons = []
+        true_query_pairs = []  # # list of (Polygon1, Polygon2) for each query
+
+        for _ in range(self.batch_size):
+            # Context set
+            ctx_inputs, ctx_targets = [], []
+            for _ in range(num_context):
+                # resample until valid composition
+                while True:
+                    p1 = self.generate_polygon()
+                    p2 = self.generate_polygon()
+                    sp1 = ShapelyPolygon(p1.vertices)
+                    sp2 = ShapelyPolygon(p2.vertices)
+                    op = operation_type or random.choice(["union", "intersection"])
+                    if op == "union":
+                        sc_shape = sp1.union(sp2)
+                    else:
+                        sc_shape = sp1.intersection(sp2)
+                    # check validity
+                    try:
+                        sc_shape = (
+                            sp1.union(sp2) if op == "union" else sp1.intersection(sp2)
+                        )
+                    except GEOSException:
+                        continue
+                    if (
+                        not sc_shape.is_empty
+                        and sc_shape.is_valid
+                        and sc_shape.geom_type == "Polygon"
+                    ):
+                        break
+                coords = list(sc_shape.exterior.coords)[:-1]
+                comp_poly = Polygon(
+                    [(x, y) for x, y in coords],
+                    self._compute_side_lengths(coords),
+                    self._compute_interior_angles(coords),
+                )
+                inp_tokens = p1.to_tokenised() + p2.to_tokenised()
+                tgt_tokens = comp_poly.to_tokenised()
+                ctx_inputs.append(inp_tokens)
+                ctx_targets.append(tgt_tokens)
+
+            # Target set
+            while True:
+                q1 = self.generate_polygon()
+                q2 = self.generate_polygon()
+                sp1 = ShapelyPolygon(q1.vertices)
+                sp2 = ShapelyPolygon(q2.vertices)
+                op = operation_type or random.choice(["union", "intersection"])
+                try:
+                    sc_shape = (
+                        sp1.union(sp2) if op == "union" else sp1.intersection(sp2)
+                    )
+                except GEOSException:
+                    continue
+                if (
+                    not sc_shape.is_empty
+                    and sc_shape.is_valid
+                    and sc_shape.geom_type == "Polygon"
+                ):
+                    break
+            true_query_pairs.append((q1, q2))
+            coords = list(sc_shape.exterior.coords)[:-1]
+            query_poly = Polygon(
+                [(x, y) for x, y in coords],
+                self._compute_side_lengths(coords),
+                self._compute_interior_angles(coords),
+            )
+            q_inp = q1.to_tokenised() + q2.to_tokenised()
+            q_tgt = query_poly.to_tokenised()
+
+            true_target_polygons.append(query_poly)
+            total_tokens_list.append(len(q_tgt))
+
+            # pad and collect
+            ctx_x_pad = self._pad_batch(ctx_inputs, self.max_seq_len)
+            ctx_y_pad = self._pad_batch(ctx_targets, self.max_seq_len)
+            qx_pad = self._pad_batch([q_inp], self.max_seq_len)
+            qy_pad = self._pad_batch([q_tgt], self.max_seq_len)
+
+            all_ctx_x.append(ctx_x_pad)
+            all_ctx_y.append(ctx_y_pad)
+            all_qx.append(qx_pad)
+            all_qy.append(qy_pad)
+
+        # stack
+        context_x = torch.stack(all_ctx_x)
+        context_y = torch.stack(all_ctx_y)
+        target_x = torch.stack(all_qx)
+        target_y = torch.stack(all_qy)
+
+        return (
+            context_x,
+            context_y,
+            target_x,
+            target_y,
+            total_tokens_list,
+            true_target_polygons,
+            true_query_pairs,
             self.max_seq_len,
             num_context,
         )
