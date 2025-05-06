@@ -97,3 +97,103 @@ def chamfer_distance(pred, true):
         ) / len(A_list)
 
     return float((avg_min(A, B) + avg_min(B, A)) / 2.0)
+
+
+def segmentwise_token_mae(pred_tokens, true_tokens):
+    """
+    Mean absolute error over each segment: vertices, lengths, angles.
+    """
+    n = (len(true_tokens) - 5) // 4
+    idx_sv = 1
+    idx_sl = 2 + 2 * n
+    idx_sa = 3 + 3 * n
+    idx_e = -1
+
+    # extract segments
+    verts_true = true_tokens[idx_sv + 1 : idx_sl]
+    lens_true = true_tokens[idx_sl + 1 : idx_sa]
+    angs_true = true_tokens[idx_sa + 1 : idx_e]
+
+    verts_pred = pred_tokens[idx_sv + 1 : idx_sl]
+    lens_pred = pred_tokens[idx_sl + 1 : idx_sa]
+    angs_pred = pred_tokens[idx_sa + 1 : idx_e]
+
+    def mae(a, b):
+        return (
+            float(sum(abs(x - y) for x, y in zip(a, b)) / len(b)) if b else float("nan")
+        )
+
+    return {
+        "vertex_mae": mae(verts_pred, verts_true),
+        "length_mae": mae(lens_pred, lens_true),
+        "angle_mae": mae(angs_pred, angs_true),
+    }
+
+
+def angle_sum_error(poly):
+    """
+    Absolute error of sum of interior angles vs (n-2)*180.
+    """
+    total = sum(poly.angles)
+    expected = (poly.n - 2) * 180.0
+    return abs(total - expected)
+
+
+def length_closure_consistency(poly):
+    """
+    Mean absolute error between token lengths and geometry-computed side lengths.
+    """
+    verts = poly.vertices
+    n = poly.n
+    comp = [
+        math.hypot(
+            verts[(i + 1) % n][0] - verts[i][0], verts[(i + 1) % n][1] - verts[i][1]
+        )
+        for i in range(n)
+    ]
+    errors = [abs(a - b) for a, b in zip(poly.lengths, comp)]
+    return sum(errors) / len(errors)
+
+
+def angle_geometry_consistency(poly):
+    """
+    Mean absolute error between token angles and geometry-computed interior angles.
+    """
+    verts = poly.vertices
+    n = poly.n
+    comp_angles = []
+    for i in range(n):
+        prev = verts[i - 1]
+        curr = verts[i]
+        nxt = verts[(i + 1) % n]
+        v1 = (prev[0] - curr[0], prev[1] - curr[1])
+        v2 = (nxt[0] - curr[0], nxt[1] - curr[1])
+        dot = v1[0] * v2[0] + v1[1] * v2[1]
+        m1 = math.hypot(*v1)
+        m2 = math.hypot(*v2)
+        if m1 * m2 < 1e-8:
+            comp_angles.append(0.0)
+        else:
+            cosv = max(-1.0, min(1.0, dot / (m1 * m2)))
+            comp_angles.append(math.degrees(math.acos(cosv)))
+    errors = [abs(a - b) for a, b in zip(poly.angles, comp_angles)]
+    return sum(errors) / len(errors)
+
+
+def prefix_accuracy(preds, trues):
+    """
+    Computes token accuracy at each position across a batch of predicted vs true token lists.
+    Returns a dict mapping position index -> accuracy.
+    """
+    max_len = max(len(t) for t in trues)
+    results = {}
+    for i in range(max_len):
+        correct = 0
+        total = 0
+        for p, t in zip(preds, trues):
+            if len(t) > i:
+                total += 1
+                if len(p) > i and p[i] == t[i]:
+                    correct += 1
+        results[i] = correct / total if total > 0 else float("nan")
+    return results
