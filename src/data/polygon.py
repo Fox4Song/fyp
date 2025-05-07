@@ -812,6 +812,8 @@ class PolygonSentenceReader(nn.Module):
                     p2 = self.generate_polygon()
                     sp1 = ShapelyPolygon(p1.vertices)
                     sp2 = ShapelyPolygon(p2.vertices)
+                    if not sp1.is_valid or not sp2.is_valid:
+                        continue
                     op = operation_type or random.choice(["union", "intersection"])
                     if op == "union":
                         sc_shape = sp1.union(sp2)
@@ -847,6 +849,8 @@ class PolygonSentenceReader(nn.Module):
                 q2 = self.generate_polygon()
                 sp1 = ShapelyPolygon(q1.vertices)
                 sp2 = ShapelyPolygon(q2.vertices)
+                if not sp1.is_valid or not sp2.is_valid:
+                        continue
                 op = operation_type or random.choice(["union", "intersection"])
                 try:
                     sc_shape = (
