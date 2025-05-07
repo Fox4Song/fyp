@@ -815,15 +815,13 @@ class PolygonSentenceReader(nn.Module):
                     if not sp1.is_valid or not sp2.is_valid:
                         continue
                     op = operation_type or random.choice(["union", "intersection"])
-                    if op == "union":
-                        sc_shape = sp1.union(sp2)
-                    else:
-                        sc_shape = sp1.intersection(sp2)
                     # check validity
                     try:
-                        sc_shape = (
-                            sp1.union(sp2) if op == "union" else sp1.intersection(sp2)
-                        )
+                        if op == "union":
+                            raw = sp1.union(sp2)
+                            sc_shape = raw.convex_hull
+                        else:
+                            sc_shape = sp1.intersection(sp2)
                     except GEOSException:
                         continue
                     if (
@@ -850,12 +848,14 @@ class PolygonSentenceReader(nn.Module):
                 sp1 = ShapelyPolygon(q1.vertices)
                 sp2 = ShapelyPolygon(q2.vertices)
                 if not sp1.is_valid or not sp2.is_valid:
-                        continue
+                    continue
                 op = operation_type or random.choice(["union", "intersection"])
                 try:
-                    sc_shape = (
-                        sp1.union(sp2) if op == "union" else sp1.intersection(sp2)
-                    )
+                    if op == "union":
+                        raw = sp1.union(sp2)
+                        sc_shape = raw.convex_hull
+                    else:
+                        sc_shape = sp1.intersection(sp2)
                 except GEOSException:
                     continue
                 if (
