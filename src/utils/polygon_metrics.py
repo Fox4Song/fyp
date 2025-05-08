@@ -180,20 +180,18 @@ def angle_geometry_consistency(poly):
     return sum(errors) / len(errors)
 
 
-def prefix_accuracy(preds, trues):
+def prefix_mae(preds, trues):
     """
-    Computes token accuracy at each position across a batch of predicted vs true token lists.
-    Returns a dict mapping position index -> accuracy.
+    Computes token MAE at each position across a batch of predicted vs true token lists.
+    Returns a dict mapping position index -> MAE.
     """
     max_len = max(len(t) for t in trues)
     results = {}
     for i in range(max_len):
-        correct = 0
-        total = 0
+        errors = []
         for p, t in zip(preds, trues):
-            if len(t) > i:
-                total += 1
-                if len(p) > i and p[i] == t[i]:
-                    correct += 1
-        results[i] = correct / total if total > 0 else float("nan")
+            # only consider samples where both true and pred have a token at i
+            if len(t) > i and len(p) > i:
+                errors.append(abs(p[i] - t[i]))
+        results[i] = sum(errors) / len(errors)
     return results
