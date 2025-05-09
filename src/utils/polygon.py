@@ -70,9 +70,10 @@ def plot_polygon_angle_completion_task_metrics(preds, trues, title=None):
         """
         total_err = 0
         total_count = 0
-        for p, t in zip(preds, trues):
-            total_err += abs(p - t)
-            total_count += 1
+        for i in range(len(preds)):
+            for p, t in zip(preds[i], trues[i]):
+                total_err += abs(p - t)
+                total_count += 1
         return total_err / total_count
 
     def angle_sum_error(preds):
