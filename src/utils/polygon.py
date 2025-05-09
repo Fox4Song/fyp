@@ -68,10 +68,10 @@ def plot_polygon_angle_completion_task_metrics(preds, trues, title=None):
         """
         Mean Absolute Error of angles over batch.
         """
-        return sum(
-            abs(sum(preds[i]) - sum(trues[i])) / len(trues[i])
-            for i in range(len(preds))
-        ) / len(preds)
+        for p, t in zip(preds, trues):
+            total_err += abs(p - t)
+            total_count += 1
+        return total_err / total_count
 
     def angle_sum_error(preds):
         """
