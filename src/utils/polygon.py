@@ -59,7 +59,7 @@ def plot_polygon_angle_completion_task_metrics(preds, trues, title=None):
     ----------
     preds : list [B, N]
         A list of predicted polygon angles.
-    
+
     trues : list [B, N]
         A list of true polygons angles.
     """
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     vertices = np.random.rand(5, 2).tolist()  # Random polygon with 5 vertices
     plot_polygon(vertices, title="Example Polygon")
 
-    # Example angle predictions and ground truths 
+    # Example angle predictions and ground truths
     preds = np.random.randint(0, 360, (1, 5)).tolist()
     trues = np.random.randint(0, 360, (1, 5)).tolist()
     plot_polygon_angle_completion_task_metrics(preds, trues)
