@@ -107,6 +107,8 @@ def plot_polygon_angle_completion_task_metrics(preds, trues, title=None):
     plt.grid(True)
     plt.show()
 
+    return angle_mae_err, angle_sum_err
+
 
 def plot_polygon_metrics(preds, trues, metrics=None):
     """
