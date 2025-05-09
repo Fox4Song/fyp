@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from polygon_metrics import (
+from .polygon_metrics import (
     side_length_mae,
     angle_mae,
     perimeter_difference,
