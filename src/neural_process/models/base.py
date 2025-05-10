@@ -44,8 +44,10 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
         if Decoder is None:
             Decoder = partial(
                 MLP,
-                n_hidden_layers=2,
+                n_hidden_layers=7,
                 hidden_size=self.r_dim,
+                dropout=0.1,
+                is_res=True,
             )
         self.decoder = Decoder(self.x_dim + self.r_dim, self.y_dim * 2)
 
@@ -259,8 +261,10 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         if LatentEncoder is None:
             LatentEncoder = partial(
                 MLP,
-                n_hidden_layers=2,
+                n_hidden_layers=6,
                 hidden_size=self.z_dim,
+                dropout=0.1,
+                is_res=True,
             )
         self.latent_encoder = LatentEncoder(self.r_dim, self.z_dim * 2)
 

@@ -32,8 +32,10 @@ class CNP(NeuralProcessFamily):
         if Encoder is None:
             Encoder = partial(
                 MLP,
-                n_hidden_layers=3,
+                n_hidden_layers=6,
                 hidden_size=self.r_dim,
+                dropout=0.1,
+                is_res=True,
             )
         self.encoder = Encoder(self.x_dim + self.y_dim, self.r_dim)
 
