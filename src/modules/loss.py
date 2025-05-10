@@ -26,16 +26,20 @@ def negative_log_likelihood(p_y_dist, y_target, mask=None):
         The computed negative log likelihood.
     """
 
-    log_p = p_y_dist.log_prob(y_target).mean(-1)
-    nll = -log_p
+    log_p = p_y_dist.log_prob(y_target)
 
     if mask is not None:
         # Reshape mask to broadcast over extra dims
-        while mask.dim() < nll.dim():
+        while mask.dim() < log_p.dim():
             mask = mask.unsqueeze(0)
-        nll = nll * mask
-        return nll.sum() / mask.sum().clamp_min(1.0)
+        log_p = log_p * mask
+        log_p_sum = log_p.sum(dim=-1)
+        valid_counts = mask.sum(dim=-1).clamp_min(1.0)
+        avg_log_p = log_p_sum / valid_counts
+    else:
+        avg_log_p = log_p.mean(dim=-1)  # [n_z, batch, n_target]
 
+    nll = -avg_log_p
     return nll.mean()
 
 
