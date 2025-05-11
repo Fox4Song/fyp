@@ -626,6 +626,7 @@ class PolygonSentenceReader(nn.Module):
         context_y = torch.stack(context_y)
         target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
         target_y = torch.stack(target_y)
+        context_masks = torch.stack(context_masks)  # [B, 1, y_size]
 
         return (
             context_x,
