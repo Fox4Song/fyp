@@ -567,6 +567,7 @@ class PolygonSentenceReader(nn.Module):
             num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
 
         context_x, context_y = [], []
+        context_masks = []
         target_x, target_y = [], []
         total_tokens_list = []
         true_target_polygons = []
@@ -602,17 +603,21 @@ class PolygonSentenceReader(nn.Module):
             tx = target_tokens[: 4 + 3 * n]
             ty = target_tokens[4 + 3 * n : -1]
 
+            mask = [1] * len(ty)
+
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             y_size = (self.max_seq_len - 4) // 3
             context_y_pad = self._pad_batch(context_y_list, y_size)
             target_x_pad = self._pad_batch([tx], self.max_seq_len)
             target_y_pad = self._pad_batch([ty], y_size)
+            context_mask = self._pad_batch([mask], y_size)
 
             context_x.append(context_x_pad)
             context_y.append(context_y_pad)
             target_x.append(target_x_pad)
             target_y.append(target_y_pad)
+            context_masks.append(context_mask)
             total_tokens_list.append(total_tokens)
             true_target_polygons.append(target_poly)
 
@@ -631,6 +636,7 @@ class PolygonSentenceReader(nn.Module):
             true_target_polygons,
             self.max_seq_len,
             num_context,
+            context_masks,
         )
 
     def generate_polygon_batch_few_shot_transformation_task(
