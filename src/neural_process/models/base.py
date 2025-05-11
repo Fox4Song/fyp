@@ -256,7 +256,6 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         self.z_dim = self.r_dim
         self.n_z_train = n_z_train
         self.n_z_test = n_z_test
-        self.gp = gp
 
         if LatentEncoder is None:
             LatentEncoder = partial(
@@ -281,10 +280,6 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         q_zc = self.infer_latent_dist(R)
 
         if self.training and y_target is not None:
-            # if Gaussian Process, then target set already includes context set
-            if not self.gp:
-                x_target = torch.cat([x_context, x_target], dim=1)
-                y_target = torch.cat([y_context, y_target], dim=1)
             R_target = self.encode_context_representation(x_target, y_target)
             q_zct = self.infer_latent_dist(R_target)
             # Sample z from posterior distribution q(z|c,t)

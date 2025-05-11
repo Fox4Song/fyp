@@ -467,23 +467,10 @@ class PolygonSentenceReader(nn.Module):
             # For testing, use a deterministic mask (e.g., mask only angles)
             if self.testing:
                 mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
-                # Hide vertices for visualisation
-                # mask = [0]
-                # for vert_idx in range(n):
-                #     if vert_idx % 2 == 0:
-                #         # hide both x and y of this vertex
-                #         mask.extend([1, 1])
-                #     else:
-                #         # keep both x and y
-                #         mask.extend([0, 0])
-                # rest = total_tokens - len(mask)
-                # mask.extend([0] * rest)
             else:
                 # Mask 15%
                 mask = self._generate_random_mask(total_tokens, 0.15)
                 mask = mask.tolist()
-            # TODO: REMOVE
-            mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
 
             context_x_list, context_y_list = [], []
 
@@ -498,12 +485,14 @@ class PolygonSentenceReader(nn.Module):
             tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
             ty = target_tokens
 
+            masks = [mask] * (num_context + 1)
+
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
             target_x_pad = self._pad_batch([tx], self.max_seq_len)
             target_y_pad = self._pad_batch([ty], self.max_seq_len)
-            context_mask = self._pad_batch([mask], self.max_seq_len)
+            context_mask = self._pad_batch([masks], self.max_seq_len)
 
             context_x.append(context_x_pad)
             context_y.append(context_y_pad)
@@ -600,10 +589,13 @@ class PolygonSentenceReader(nn.Module):
                 context_x_list.append(cx)
                 context_y_list.append(cy)
 
-            tx = target_tokens[: 4 + 3 * n]
-            ty = target_tokens[4 + 3 * n : -1]
+            ty_len = len(target_tokens[4 + 3 * n : -1])
+            tx = context_x_list.copy()
+            ty = context_y_list.copy()
+            tx.append(target_tokens[: 4 + 3 * n])
+            ty.append(target_tokens[4 + 3 * n : -1])
 
-            mask = [1] * len(ty)
+            mask = [0] * len(context_y_list) + [1] * ty_len
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
