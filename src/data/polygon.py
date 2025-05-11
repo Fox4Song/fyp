@@ -483,13 +483,16 @@ class PolygonSentenceReader(nn.Module):
                 context_y_list.append(tokens)
 
             tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
-            ty = target_tokens
+            tx_list = context_x_list.copy()
+            ty_list = context_y_list.copy()
+            tx_list.append(tx)
+            ty_list.append(target_tokens)
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
-            target_x_pad = self._pad_batch([tx], self.max_seq_len)
-            target_y_pad = self._pad_batch([ty], self.max_seq_len)
+            target_x_pad = self._pad_batch(tx_list, self.max_seq_len)
+            target_y_pad = self._pad_batch(ty_list, self.max_seq_len)
             context_mask = self._pad_batch([mask], self.max_seq_len)
 
             context_x.append(context_x_pad)
@@ -587,20 +590,21 @@ class PolygonSentenceReader(nn.Module):
                 context_x_list.append(cx)
                 context_y_list.append(cy)
 
-            ty_len = len(target_tokens[4 + 3 * n : -1])
-            tx = context_x_list.copy()
-            ty = context_y_list.copy()
-            tx.append(target_tokens[: 4 + 3 * n])
-            ty.append(target_tokens[4 + 3 * n : -1])
+            tx = target_tokens[: 4 + 3 * n]
+            ty = target_tokens[4 + 3 * n : -1]
+            tx_list = context_x_list.copy()
+            ty_list = context_y_list.copy()
+            tx_list.append(tx)
+            ty_list.append(ty)
 
-            mask = [1] * ty_len
+            mask = [1] * len(ty)
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             y_size = (self.max_seq_len - 4) // 3
             context_y_pad = self._pad_batch(context_y_list, y_size)
-            target_x_pad = self._pad_batch([tx], self.max_seq_len)
-            target_y_pad = self._pad_batch([ty], y_size)
+            target_x_pad = self._pad_batch(tx_list, self.max_seq_len)
+            target_y_pad = self._pad_batch(ty_list, y_size)
             context_mask = self._pad_batch([mask], y_size)
 
             context_x.append(context_x_pad)
