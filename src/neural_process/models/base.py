@@ -219,7 +219,7 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
         p_y_mu, p_y_logsigma = p_y_stats.split(self.y_dim, dim=-1)
 
         # Result from Le, Tuan Anh, et al. Empirical Evaluation of Neural Process Objectives. 2018.
-        p_y_sigma = 0.01 + 0.99 * F.softplus(p_y_logsigma)
+        p_y_sigma = 0.1 + 0.9 * F.softplus(p_y_logsigma)
 
         # [n_z, batch_size, n_target, y_dim]
         p_y_target = torch.distributions.normal.Normal(p_y_mu, p_y_sigma)
@@ -326,8 +326,8 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         # [batch_size, n_lat, z_dim]
         q_z_mu, q_z_logsigma = q_z_stats.split(self.z_dim, dim=-1)
 
-        # Taken from the deepmind repo
-        q_z_sigma = 0.01 + 0.99 * F.sigmoid(0.5 * q_z_logsigma)
+        # Taken from the original NP paper 
+        q_z_sigma = 0.1 + 0.9 * F.sigmoid(q_z_logsigma)
         # [batch_size, n_lat, z_dim]
         q_zc = torch.distributions.normal.Normal(q_z_mu, q_z_sigma)
 
