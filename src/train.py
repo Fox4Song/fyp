@@ -5,12 +5,13 @@ from transformer.models import TransformerDecoder
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from torch.nn.utils import clip_grad_norm_
 
 # --- Set up data generation parameters ---
-TRAINING_ITERATIONS = int(2e5)
-BATCH_SIZE = 64
+TRAINING_ITERATIONS = int(3e5)
+WARMUP_ITERATIONS = int(1e4)
+BATCH_SIZE = 128
 CLIP_NORM = 1.0
 LOG_INTERVAL = 1000
 INITIAL_LR = 1e-4
@@ -37,13 +38,27 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # --- Model & optimizer ---
 x_dim, y_dim = 1, 1
 model = TransformerDecoder(
-    x_dim, y_dim, r_dim=128, decoder_layers=2, decoder_heads=8
+    x_dim, y_dim, r_dim=128, decoder_layers=8, decoder_heads=8
 ).to(device)
 total_params = sum(p.numel() for p in model.parameters())
 print(f"Total parameters: {total_params:,}")
 
 optimizer = optim.AdamW(model.parameters(), lr=INITIAL_LR, weight_decay=1e-2)
-scheduler = CosineAnnealingLR(optimizer, T_max=TRAINING_ITERATIONS, eta_min=MIN_LR)
+
+warmup_scheduler = LinearLR(
+    optimizer,
+    start_factor=0.1,
+    end_factor=1.0,
+    total_iters=WARMUP_ITERATIONS
+)
+
+cosine_scheduler = CosineAnnealingLR(optimizer, T_max=TRAINING_ITERATIONS-WARMUP_ITERATIONS, eta_min=MIN_LR)
+
+scheduler = SequentialLR(
+    optimizer,
+    schedulers=[warmup_scheduler, cosine_scheduler],
+    milestones=[WARMUP_ITERATIONS]
+)
 
 # --- Training Loop ---
 model.train()
@@ -92,7 +107,7 @@ for it in range(TRAINING_ITERATIONS + 1):
         )
         running_loss = 0.0
 
-final_checkpoint_path = f"final_decoder_tf_model_{max_seq_len}_maxseqlen_min_{min_num_sides}_max_{max_num_sides}_sides.pt"
+final_checkpoint_path = f"final_tf_model_{total_params}_params.pt"
 torch.save(
     {
         "iteration": TRAINING_ITERATIONS,
