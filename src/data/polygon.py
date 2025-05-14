@@ -409,7 +409,7 @@ class PolygonSentenceReader(nn.Module):
 
         return Polygon(vertices, lengths, angles)
 
-    def generate_polygon_batch_few_shot_masked_completion_task(self, num_context=None):
+    def generate_polygon_batch_few_shot_masked_completion_task(self, num_context=None, mask_cfg=None):
         """
         Gnerates a batch of Polygons for Few-Shot Masked Completion Tasks
 
@@ -465,8 +465,20 @@ class PolygonSentenceReader(nn.Module):
             total_tokens = len(target_tokens)
 
             # For testing, use a deterministic mask (e.g., mask only angles)
-            if self.testing:
-                mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
+            if self.testing and mask_cfg is not None:
+                p = mask_cfg["p"]
+                if mask_cfg["type"] == "angle":
+                    base_mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
+                elif mask_cfg["type"] == "length": 
+                    base_mask = [0] * (3 + 2 * n) + [1] * n + [0] * (total_tokens - (3 + 3 * n))
+                elif mask_cfg["type"] == "vertex":
+                    base_mask = [0] * 2 + [1] * (2 * n) + [0] * (total_tokens - (2 + 2 * n))
+                else:
+                    base_mask = [1] * total_tokens
+                one_positions = [i for i,v in enumerate(base_mask) if v == 1]
+                num_to_keep = int(len(one_positions) * p)
+                keep_positions = set(random.sample(one_positions, num_to_keep))
+                mask = [1 if i in keep_positions else 0 for i in range(total_tokens)]
             else:
                 # Mask 15%
                 mask = self._generate_random_mask(total_tokens, 0.15)
