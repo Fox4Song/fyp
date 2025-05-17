@@ -466,19 +466,20 @@ class PolygonSentenceReader(nn.Module):
 
             # For testing, use a deterministic mask (e.g., mask only angles)
             if self.testing and mask_cfg is not None:
-                p = mask_cfg["p"]
                 if mask_cfg["type"] == "angle":
-                    base_mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
+                    mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
                 elif mask_cfg["type"] == "length": 
-                    base_mask = [0] * (3 + 2 * n) + [1] * n + [0] * (total_tokens - (3 + 3 * n))
+                    mask = [0] * (3 + 2 * n) + [1] * n + [0] * (total_tokens - (3 + 3 * n))
                 elif mask_cfg["type"] == "vertex":
-                    base_mask = [0] * 2 + [1] * (2 * n) + [0] * (total_tokens - (2 + 2 * n))
+                    mask = [0] * 2 + [1] * (2 * n) + [0] * (total_tokens - (2 + 2 * n))
                 else:
-                    base_mask = [1] * total_tokens
-                one_positions = [i for i,v in enumerate(base_mask) if v == 1]
-                num_to_keep = int(len(one_positions) * p)
-                keep_positions = set(random.sample(one_positions, num_to_keep))
-                mask = [1 if i in keep_positions else 0 for i in range(total_tokens)]
+                    mask = [1] * total_tokens
+                if "p" in mask_cfg:    
+                    p = mask_cfg["p"]
+                    one_positions = [i for i,v in enumerate(mask) if v == 1]
+                    num_to_keep = int(len(one_positions) * p)
+                    keep_positions = set(random.sample(one_positions, num_to_keep))
+                    mask = [1 if i in keep_positions else 0 for i in range(total_tokens)]
             else:
                 # Mask 15%
                 mask = self._generate_random_mask(total_tokens, 0.15)
