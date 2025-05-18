@@ -445,6 +445,8 @@ class PolygonSentenceReader(nn.Module):
 
         if num_context is None:
             num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+            
+        num_target = torch.randint(low=2, high=self.max_num_context + 1, size=(1,))
 
         context_x, context_y = [], []
         context_masks = []
@@ -466,6 +468,7 @@ class PolygonSentenceReader(nn.Module):
 
             # For testing, use a deterministic mask (e.g., mask only angles)
             if self.testing and mask_cfg is not None:
+                num_target = 1
                 if mask_cfg["type"] == "angle":
                     mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
                 elif mask_cfg["type"] == "length": 
@@ -495,11 +498,16 @@ class PolygonSentenceReader(nn.Module):
                 context_x_list.append(cx)
                 context_y_list.append(tokens)
 
-            tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
-            tx_list = context_x_list.copy()
-            ty_list = context_y_list.copy()
-            tx_list.append(tx)
-            ty_list.append(target_tokens)
+            tx_list, ty_list = context_x_list.copy(), context_y_list.copy()
+            target_poly_list = []
+
+            for _ in range(num_target):
+                target_poly = self.generate_polygon(n)
+                target_poly_list.append(target_poly)
+                target_tokens = target_poly.to_tokenised()
+                tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
+                tx_list.append(tx)
+                ty_list.append(target_tokens)
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
@@ -514,12 +522,12 @@ class PolygonSentenceReader(nn.Module):
             target_y.append(target_y_pad)
             context_masks.append(context_mask)
             total_tokens_list.append(total_tokens)
-            true_target_polygons.append(target_poly)
+            true_target_polygons.append(target_poly_list)
 
         # Stack individual samples to create batch tensors.
         context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
         context_y = torch.stack(context_y)
-        target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
+        target_x = torch.stack(target_x)  # [B, num_target, max_seq_len]
         target_y = torch.stack(target_y)
         context_masks = torch.stack(context_masks)  # [B, 1, max_seq_len]
 
@@ -532,6 +540,7 @@ class PolygonSentenceReader(nn.Module):
             true_target_polygons,
             self.max_seq_len,
             num_context,
+            num_target,
             context_masks,
         )
 
@@ -569,6 +578,11 @@ class PolygonSentenceReader(nn.Module):
         if num_context is None:
             num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
 
+        if self.testing:
+            num_target = 1
+        else:
+            num_target = torch.randint(low=2, high=self.max_num_context + 1, size=(1,))
+
         context_x, context_y = [], []
         context_masks = []
         target_x, target_y = [], []
@@ -581,11 +595,6 @@ class PolygonSentenceReader(nn.Module):
 
             # Choose a fixed number of sides for this sample
             n = random.randint(self.min_num_sides, self.max_num_sides)
-
-            # Generate the target polygon and its tokenised form.
-            target_poly = self.generate_polygon(n)
-            target_tokens = target_poly.to_tokenised()
-            total_tokens = len(target_tokens)
 
             context_x_list, context_y_list = [], []
 
@@ -603,12 +612,19 @@ class PolygonSentenceReader(nn.Module):
                 context_x_list.append(cx)
                 context_y_list.append(cy)
 
-            tx = target_tokens[: 4 + 3 * n]
-            ty = target_tokens[4 + 3 * n : -1]
-            tx_list = context_x_list.copy()
-            ty_list = context_y_list.copy()
-            tx_list.append(tx)
-            ty_list.append(ty)
+            tx_list, ty_list = context_x_list.copy(), context_y_list.copy()
+            target_poly_list = []
+
+            for _ in range(num_target):
+                # Generate the target polygon and its tokenised form.
+                target_poly = self.generate_polygon(n)
+                target_poly_list.append(target_poly)
+                target_tokens = target_poly.to_tokenised()
+                total_tokens = len(target_tokens)
+                tx = target_tokens[: 4 + 3 * n]
+                ty = target_tokens[4 + 3 * n : -1]
+                tx_list.append(tx)
+                ty_list.append(ty)
 
             mask = [1] * len(ty)
 
@@ -626,12 +642,12 @@ class PolygonSentenceReader(nn.Module):
             target_y.append(target_y_pad)
             context_masks.append(context_mask)
             total_tokens_list.append(total_tokens)
-            true_target_polygons.append(target_poly)
+            true_target_polygons.append(target_poly_list)
 
         # Stack individual samples to create batch tensors.
         context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
         context_y = torch.stack(context_y)
-        target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
+        target_x = torch.stack(target_x)  # [B, num_target, max_seq_len]
         target_y = torch.stack(target_y)
         context_masks = torch.stack(context_masks)  # [B, 1, y_size]
 
@@ -644,6 +660,7 @@ class PolygonSentenceReader(nn.Module):
             true_target_polygons,
             self.max_seq_len,
             num_context,
+            num_target,
             context_masks,
         )
 
@@ -692,6 +709,11 @@ class PolygonSentenceReader(nn.Module):
         if num_context is None:
             num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
 
+        if self.testing:
+            num_target = 1
+        else:
+            num_target = torch.randint(low=2, high=self.max_num_context + 1, size=(1,))
+
         context_x, context_y = [], []
         target_x, target_y = [], []
         total_tokens_list = []
@@ -709,16 +731,7 @@ class PolygonSentenceReader(nn.Module):
             transformation_type, params = self._sample_random_transformation(
                 transformation_type
             )
-
-            # Generate the target polygon and its tokenised form.
-            target_poly = self.generate_polygon(n)
-            transformed_poly = self._transform_polygon(
-                target_poly, transformation_type, params
-            )
-            target_tokens = target_poly.to_tokenised()
-            target_trans_tokens = transformed_poly.to_tokenised()
-            total_tokens = len(target_trans_tokens)
-
+            
             context_x_list, context_y_list = [], []
 
             for _ in range(num_context):
@@ -732,27 +745,43 @@ class PolygonSentenceReader(nn.Module):
                 context_x_list.append(tokens)
                 context_y_list.append(transformed_tokens_context)
 
-            tx = target_tokens
-            ty = target_trans_tokens
+            tx_list, ty_list = context_x_list.copy(), context_y_list.copy()
+            target_poly_list, transformed_target_poly_list = [], []
+
+            for _ in range(num_target):
+                # Generate the target polygon and its tokenised form.
+                target_poly = self.generate_polygon(n)
+                target_poly_list.append(target_poly)
+                transformed_poly = self._transform_polygon(
+                    target_poly, transformation_type, params
+                )
+                transformed_target_poly_list.append(transformed_poly)
+                target_tokens = target_poly.to_tokenised()
+                target_trans_tokens = transformed_poly.to_tokenised()
+                total_tokens = len(target_trans_tokens)
+                tx = target_tokens
+                ty = target_trans_tokens
+                tx_list.append(tx)
+                ty_list.append(ty)
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
-            target_x_pad = self._pad_batch([tx], self.max_seq_len)
-            target_y_pad = self._pad_batch([ty], self.max_seq_len)
+            target_x_pad = self._pad_batch(tx_list, self.max_seq_len)
+            target_y_pad = self._pad_batch(ty_list, self.max_seq_len)
 
             context_x.append(context_x_pad)
             context_y.append(context_y_pad)
             target_x.append(target_x_pad)
             target_y.append(target_y_pad)
             total_tokens_list.append(total_tokens)
-            true_target_polygons.append(target_poly)
-            true_transformed_polygons.append(transformed_poly)
+            true_target_polygons.append(target_poly_list)
+            true_transformed_polygons.append(transformed_target_poly_list)
 
         # Stack individual samples to create batch tensors.
         context_x = torch.stack(context_x)  # [B, num_context, max_seq_len]
         context_y = torch.stack(context_y)
-        target_x = torch.stack(target_x)  # [B, 1, max_seq_len]
+        target_x = torch.stack(target_x)  # [B, num_target, max_seq_len]
         target_y = torch.stack(target_y)
 
         return (
@@ -765,6 +794,7 @@ class PolygonSentenceReader(nn.Module):
             true_transformed_polygons,
             self.max_seq_len,
             num_context,
+            num_target,
         )
 
     def generate_polygon_batch_few_shot_composition_task(
@@ -803,8 +833,14 @@ class PolygonSentenceReader(nn.Module):
         num_context : int
             Number of context points in the batch.
         """
+
         if num_context is None:
-            num_context = torch.randint(3, self.max_num_context + 1, (1,)).item()
+            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+
+        if self.testing:
+            num_target = 1
+        else:
+            num_target = torch.randint(low=2, high=self.max_num_context + 1, size=(1,))
 
         all_ctx_x, all_ctx_y = [], []
         all_qx, all_qy = [], []
@@ -813,6 +849,7 @@ class PolygonSentenceReader(nn.Module):
         true_query_pairs = []  # # list of (Polygon1, Polygon2) for each query
 
         for _ in range(self.batch_size):
+
             # Context set
             ctx_inputs, ctx_targets = [], []
             for _ in range(num_context):
@@ -851,47 +888,55 @@ class PolygonSentenceReader(nn.Module):
                 ctx_inputs.append(inp_tokens)
                 ctx_targets.append(tgt_tokens)
 
-            # Target set
-            while True:
-                q1 = self.generate_polygon()
-                q2 = self.generate_polygon()
-                sp1 = ShapelyPolygon(q1.vertices)
-                sp2 = ShapelyPolygon(q2.vertices)
-                if not sp1.is_valid or not sp2.is_valid:
-                    continue
-                op = operation_type or random.choice(["union", "intersection"])
-                try:
-                    if op == "union":
-                        raw = sp1.union(sp2)
-                        sc_shape = raw.convex_hull
-                    else:
-                        sc_shape = sp1.intersection(sp2)
-                except GEOSException:
-                    continue
-                if (
-                    not sc_shape.is_empty
-                    and sc_shape.is_valid
-                    and sc_shape.geom_type == "Polygon"
-                ):
-                    break
-            true_query_pairs.append((q1, q2))
-            coords = list(sc_shape.exterior.coords)[:-1]
-            query_poly = Polygon(
-                [(x, y) for x, y in coords],
-                self._compute_side_lengths(coords),
-                self._compute_interior_angles(coords),
-            )
-            q_inp = q1.to_tokenised() + q2.to_tokenised()
-            q_tgt = query_poly.to_tokenised()
+            tx_list, ty_list = ctx_inputs.copy(), ctx_targets.copy()
+            target_polygons_list, query_poly_list = [], []
 
-            true_target_polygons.append(query_poly)
+            for _ in range(num_target):
+
+                # Target set
+                while True:
+                    q1 = self.generate_polygon()
+                    q2 = self.generate_polygon()
+                    sp1 = ShapelyPolygon(q1.vertices)
+                    sp2 = ShapelyPolygon(q2.vertices)
+                    if not sp1.is_valid or not sp2.is_valid:
+                        continue
+                    op = operation_type or random.choice(["union", "intersection"])
+                    try:
+                        if op == "union":
+                            raw = sp1.union(sp2)
+                            sc_shape = raw.convex_hull
+                        else:
+                            sc_shape = sp1.intersection(sp2)
+                    except GEOSException:
+                        continue
+                    if (
+                        not sc_shape.is_empty
+                        and sc_shape.is_valid
+                        and sc_shape.geom_type == "Polygon"
+                    ):
+                        break
+                true_query_pairs.append((q1, q2))
+                coords = list(sc_shape.exterior.coords)[:-1]
+                query_poly = Polygon(
+                    [(x, y) for x, y in coords],
+                    self._compute_side_lengths(coords),
+                    self._compute_interior_angles(coords),
+                )
+                q_inp = q1.to_tokenised() + q2.to_tokenised()
+                q_tgt = query_poly.to_tokenised()
+                tx_list.append(q_inp)
+                ty_list.append(q_tgt)
+
+                target_polygons_list.append(query_poly)
+
             total_tokens_list.append(len(q_tgt))
 
             # pad and collect
             ctx_x_pad = self._pad_batch(ctx_inputs, self.max_seq_len)
             ctx_y_pad = self._pad_batch(ctx_targets, self.max_seq_len)
-            qx_pad = self._pad_batch([q_inp], self.max_seq_len)
-            qy_pad = self._pad_batch([q_tgt], self.max_seq_len)
+            qx_pad = self._pad_batch(tx_list, self.max_seq_len)
+            qy_pad = self._pad_batch(ty_list, self.max_seq_len)
 
             all_ctx_x.append(ctx_x_pad)
             all_ctx_y.append(ctx_y_pad)
