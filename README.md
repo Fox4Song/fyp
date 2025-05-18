@@ -59,7 +59,7 @@ Deep learning excels in data-driven predictions but struggles in small data sett
 - Loss decreases sharply, indicating both models are effectively learning from added context.
 - NP stabilises quickly ~10 context points.
 - Transformer initially follows same trend as NP.
-- Demonstrates some "phase change" at ~10 context points.
+- Demonstrates some "phase change" at ~10 context points (Poor OOD performance).
 - Beyond 10 context points, displays somewhat consistent high loss with slight fluctuation.
 
 ## References
