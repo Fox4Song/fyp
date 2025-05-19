@@ -288,7 +288,7 @@ class PolygonSentenceReader(nn.Module):
         mask = mask.to(torch.int)
         return mask
 
-    def _sample_random_transformation(self, t_type=None):
+    def _sample_random_transformation(self, t_type=None, eval=False):
         """
         Samples a random transformation type and its parameters.
 
@@ -303,20 +303,29 @@ class PolygonSentenceReader(nn.Module):
             t_type = random.choice(["rotation", "scaling", "translation"])
 
         if t_type == "rotation":
-            params = {"angle": random.uniform(15, 180)}
+            params = {
+                "angle": random.uniform(180, 270) if eval else random.uniform(15, 180)
+            }
         elif t_type == "scaling":
             params = {
-                "scale_x": random.uniform(0.5, 1.5),
-                "scale_y": random.uniform(0.5, 1.5),
+                "scale_x": (
+                    random.uniform(1.5, 2.0) if eval else random.uniform(0.5, 1.5)
+                ),
+                "scale_y": (
+                    random.uniform(1.5, 2.0) if eval else random.uniform(0.5, 1.5)
+                ),
             }
         elif t_type == "translation":
-            params = {"dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)}
+            params = {
+                "dx": random.uniform(-4, 4) if eval else random.uniform(-2, 2),
+                "dy": random.uniform(-4, 4) if eval else random.uniform(-2, 2),
+            }
         else:
             raise ValueError("Unknown Transformation Type")
 
         return t_type, params
 
-    def _transform_polygon(self, polygon, t_type=None, parameters=None):
+    def _transform_polygon(self, polygon, t_type=None, parameters=None, eval=False):
         """
         Applies a transformation to the given polygon.
 
@@ -346,7 +355,10 @@ class PolygonSentenceReader(nn.Module):
         if t_type == "rotation":
             # Rotate around the polygon's centroid.
             if parameters is None:
-                angle = random.uniform(15, 180)  # degrees
+                if eval:
+                    angle = random.uniform(180.0, 270.0)
+                else:
+                    angle = random.uniform(15, 180)  # degrees
             else:
                 angle = parameters["angle"]
             angle_rad = math.radians(angle)
@@ -364,8 +376,12 @@ class PolygonSentenceReader(nn.Module):
         elif t_type == "scaling":
             # Scale around the polygon's centroid.
             if parameters is None:
-                scalex = random.uniform(0.5, 1.5)
-                scaley = random.uniform(0.5, 1.5)
+                if eval:
+                    scalex = random.uniform(1.5, 2.0)
+                    scaley = random.uniform(1.5, 2.0)
+                else:
+                    scalex = random.uniform(0.5, 1.5)
+                    scaley = random.uniform(0.5, 1.5)
             else:
                 scalex = parameters["scale_x"]
                 scaley = parameters["scale_y"]
@@ -379,8 +395,12 @@ class PolygonSentenceReader(nn.Module):
         elif t_type == "translation":
             # Translate by a random vector.
             if parameters is None:
-                dx = random.uniform(-2, 2)
-                dy = random.uniform(-2, 2)
+                if eval:
+                    dx = random.uniform(-2, 2)
+                    dy = random.uniform(-2, 2)
+                else:
+                    dx = random.uniform(-4, 4)
+                    dy = random.uniform(-4, 4)
             else:
                 dx = parameters["dx"]
                 dy = parameters["dy"]
@@ -673,19 +693,26 @@ class PolygonSentenceReader(nn.Module):
         )
 
     def generate_polygon_batch_few_shot_transformation_task(
-        self, num_context=None, transformation_type=None
+        self,
+        num_context=None,
+        transformation_type=None,
+        eval=False,
     ):
         """
         Gnerates a batch of Polygons for Few-Shot Transformation Tasks
 
         Rotate, scale, or translate a polygon and predict
-        the new properties
+        the new properties, with optional OOD parameter sampling.
 
         Parameters
         ----------
         transformation_type : str
             The type of transformation to apply to the polygon.
             Can be one of 'rotation', 'translation', or 'scaling'.
+
+        eval: bool
+            If True, the function will generate a batch of polygons
+            with the same transformation type for evaluation.
 
         Returns
         -------
@@ -737,7 +764,7 @@ class PolygonSentenceReader(nn.Module):
 
             # Sample random transformation
             transformation_type, params = self._sample_random_transformation(
-                transformation_type
+                transformation_type, eval=eval
             )
 
             context_x_list, context_y_list = [], []
