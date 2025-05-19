@@ -77,21 +77,28 @@ total_params = sum(p.numel() for p in model.parameters())
 print(f"Total parameters: {total_params:,}")
 
 train_losses = []
-test_losses  = []
+test_losses = []
 iters_list = []
 
 checkpoint = False
 
 if checkpoint:
-    ckpt = torch.load("../models/polygon/np/" + model.__class__.__name__ + "_checkpoint.pt",
-                        map_location=device)
+    ckpt = torch.load(
+        "../models/polygon/np/" + model.__class__.__name__ + "_checkpoint.pt",
+        map_location=device,
+    )
 
-    model.load_state_dict(ckpt['model_state_dict'])
-    optimizer.load_state_dict(ckpt['optimizer_state_dict'])
-    scheduler.load_state_dict(ckpt['scheduler_state_dict'])
-    start_iter = ckpt['iteration'] + 1
+    model.load_state_dict(ckpt["model_state_dict"])
+    optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+    scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+    start_iter = ckpt["iteration"] + 1
     model.to(device)
-    print("Loaded checkpoint from: " + "../models/polygon/np/" + model.__class__.__name__ + "_checkpoint.pt")
+    print(
+        "Loaded checkpoint from: "
+        + "../models/polygon/np/"
+        + model.__class__.__name__
+        + "_checkpoint.pt"
+    )
 else:
     start_iter = 1
 
@@ -184,15 +191,27 @@ for it in range(start_iter, TRAINING_ITERATIONS + 1):
 
         print("True Polygon: ", true_polygon)
         print("True Polygon Angles: ", true_polygon.angles)
-        print("Predicted Polygon Angles: ", pred_target_avg.tolist()[:len(true_polygon.angles)])
+        print(
+            "Predicted Polygon Angles: ",
+            pred_target_avg.tolist()[: len(true_polygon.angles)],
+        )
 
 checkpoint = {
-    'iteration': it,                                 
-    'model_state_dict': model.state_dict(),         
-    'optimizer_state_dict': optimizer.state_dict(),  
-    'scheduler_state_dict': scheduler.state_dict(),  
+    "iteration": it,
+    "model_state_dict": model.state_dict(),
+    "optimizer_state_dict": optimizer.state_dict(),
+    "scheduler_state_dict": scheduler.state_dict(),
 }
 
-torch.save(model.state_dict(), "models/polygon/np/angle_completion_task/" + model.__class__.__name__ + ".pt")
-torch.save(checkpoint, "models/polygon/np/" + model.__class__.__name__ + "_checkpoint.pt")
-print(f"Saved final checkpoint at iteration {it} → models/polygon/np/" + model.__class__.__name__ + "_checkpoint.pt")
+torch.save(
+    model.state_dict(),
+    "models/polygon/np/angle_completion_task/" + model.__class__.__name__ + ".pt",
+)
+torch.save(
+    checkpoint, "models/polygon/np/" + model.__class__.__name__ + "_checkpoint.pt"
+)
+print(
+    f"Saved final checkpoint at iteration {it} → models/polygon/np/"
+    + model.__class__.__name__
+    + "_checkpoint.pt"
+)

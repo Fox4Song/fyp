@@ -46,18 +46,17 @@ print(f"Total parameters: {total_params:,}")
 optimizer = optim.AdamW(model.parameters(), lr=INITIAL_LR, weight_decay=1e-2)
 
 warmup_scheduler = LinearLR(
-    optimizer,
-    start_factor=0.1,
-    end_factor=1.0,
-    total_iters=WARMUP_ITERATIONS
+    optimizer, start_factor=0.1, end_factor=1.0, total_iters=WARMUP_ITERATIONS
 )
 
-cosine_scheduler = CosineAnnealingLR(optimizer, T_max=TRAINING_ITERATIONS-WARMUP_ITERATIONS, eta_min=MIN_LR)
+cosine_scheduler = CosineAnnealingLR(
+    optimizer, T_max=TRAINING_ITERATIONS - WARMUP_ITERATIONS, eta_min=MIN_LR
+)
 
 scheduler = SequentialLR(
     optimizer,
     schedulers=[warmup_scheduler, cosine_scheduler],
-    milestones=[WARMUP_ITERATIONS]
+    milestones=[WARMUP_ITERATIONS],
 )
 
 # --- Training Loop ---

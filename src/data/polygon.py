@@ -409,7 +409,9 @@ class PolygonSentenceReader(nn.Module):
 
         return Polygon(vertices, lengths, angles)
 
-    def generate_polygon_batch_few_shot_masked_completion_task(self, num_context=None, mask_cfg=None):
+    def generate_polygon_batch_few_shot_masked_completion_task(
+        self, num_context=None, mask_cfg=None
+    ):
         """
         Gnerates a batch of Polygons for Few-Shot Masked Completion Tasks
 
@@ -445,7 +447,7 @@ class PolygonSentenceReader(nn.Module):
 
         if num_context is None:
             num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
-            
+
         num_target = torch.randint(low=2, high=self.max_num_context + 1, size=(1,))
 
         context_x, context_y = [], []
@@ -470,19 +472,25 @@ class PolygonSentenceReader(nn.Module):
             if self.testing and mask_cfg is not None:
                 num_target = 1
                 if mask_cfg["type"] == "angle":
-                    mask = [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
-                elif mask_cfg["type"] == "length": 
-                    mask = [0] * (3 + 2 * n) + [1] * n + [0] * (total_tokens - (3 + 3 * n))
+                    mask = (
+                        [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
+                    )
+                elif mask_cfg["type"] == "length":
+                    mask = (
+                        [0] * (3 + 2 * n) + [1] * n + [0] * (total_tokens - (3 + 3 * n))
+                    )
                 elif mask_cfg["type"] == "vertex":
                     mask = [0] * 2 + [1] * (2 * n) + [0] * (total_tokens - (2 + 2 * n))
                 else:
                     mask = [1] * total_tokens
-                if "p" in mask_cfg:    
+                if "p" in mask_cfg:
                     p = mask_cfg["p"]
-                    one_positions = [i for i,v in enumerate(mask) if v == 1]
+                    one_positions = [i for i, v in enumerate(mask) if v == 1]
                     num_to_keep = int(len(one_positions) * p)
                     keep_positions = set(random.sample(one_positions, num_to_keep))
-                    mask = [1 if i in keep_positions else 0 for i in range(total_tokens)]
+                    mask = [
+                        1 if i in keep_positions else 0 for i in range(total_tokens)
+                    ]
             else:
                 # Mask 15%
                 mask = self._generate_random_mask(total_tokens, 0.15)
@@ -731,7 +739,7 @@ class PolygonSentenceReader(nn.Module):
             transformation_type, params = self._sample_random_transformation(
                 transformation_type
             )
-            
+
             context_x_list, context_y_list = [], []
 
             for _ in range(num_context):

@@ -326,7 +326,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         # [batch_size, n_lat, z_dim]
         q_z_mu, q_z_logsigma = q_z_stats.split(self.z_dim, dim=-1)
 
-        # Taken from the original NP paper 
+        # Taken from the original NP paper
         q_z_sigma = 0.1 + 0.9 * F.sigmoid(q_z_logsigma)
         # [batch_size, n_lat, z_dim]
         q_zc = torch.distributions.normal.Normal(q_z_mu, q_z_sigma)
