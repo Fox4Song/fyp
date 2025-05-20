@@ -696,6 +696,7 @@ class PolygonSentenceReader(nn.Module):
         self,
         num_context=None,
         transformation_type=None,
+        next_transformation_type=None,
         eval=False,
     ):
         """
@@ -766,6 +767,8 @@ class PolygonSentenceReader(nn.Module):
             transformation_type, params = self._sample_random_transformation(
                 transformation_type, eval=eval
             )
+            if next_transformation_type is not None:
+                next_transformation_type, next_transformation_params = self._sample_random_transformation(next_transformation_type, eval=eval)
 
             context_x_list, context_y_list = [], []
 
@@ -776,6 +779,10 @@ class PolygonSentenceReader(nn.Module):
                 transformed_context_poly = self._transform_polygon(
                     poly, transformation_type, params
                 )
+                if next_transformation_type is not None:
+                    transformed_context_poly = self._transform_polygon(
+                        transformed_context_poly, next_transformation_type, next_transformation_params
+                    )
                 transformed_tokens_context = transformed_context_poly.to_tokenised()
                 context_x_list.append(tokens)
                 context_y_list.append(transformed_tokens_context)
@@ -790,6 +797,10 @@ class PolygonSentenceReader(nn.Module):
                 transformed_poly = self._transform_polygon(
                     target_poly, transformation_type, params
                 )
+                if next_transformation_type is not None:
+                    transformed_poly = self._transform_polygon(
+                        transformed_poly, next_transformation_type, next_transformation_params
+                    )
                 transformed_target_poly_list.append(transformed_poly)
                 target_tokens = target_poly.to_tokenised()
                 target_trans_tokens = transformed_poly.to_tokenised()
