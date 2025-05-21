@@ -18,8 +18,8 @@ BATCH_SIZE = 128
 MAX_CONTEXT_POINTS = 15
 MIN_SIDES = 3
 MAX_SIDES = 8
-x_size = 4 + 3 * MAX_SIDES
-y_size = MAX_SIDES
+x_size = 4 + 3 * 12
+y_size = 12
 torch.manual_seed(0)
 
 criterion = ELBOLoss()

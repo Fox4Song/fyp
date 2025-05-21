@@ -58,12 +58,12 @@ def get_model_config(model_name, x_size, y_size):
                 "attention_type": "multihead",
                 "n_z_train": 10,
                 "n_z_test": 10,
-                "Encoder": partial(MLP, n_hidden_layers=2, hidden_size=224),
+                "Encoder": partial(MLP, n_hidden_layers=2, hidden_size=224, is_res=True),
                 "LatentEncoder": partial(
-                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1
+                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=True
                 ),
                 "Decoder": partial(
-                    MLP, n_hidden_layers=5, hidden_size=224, dropout=0.1
+                    MLP, n_hidden_layers=5, hidden_size=224, dropout=0.1, is_res=True
                 ),
             },
             "criterion": ELBOLoss(),
@@ -77,8 +77,9 @@ def get_model_config(model_name, x_size, y_size):
 
 def transform_train(model_name, iters, plot_after, device, resume):
     MIN_SIDES, MAX_SIDES = 3, 8
-    x_size = 5 + 4 * MAX_SIDES
-    y_size = x_size
+    MAX_SEQ_LEN = 5 + 4 * 12
+    x_size = MAX_SEQ_LEN
+    y_size = MAX_SEQ_LEN
 
     cfg = get_model_config(model_name, x_size, y_size)
     BATCH = cfg["batch_size"]
@@ -98,8 +99,8 @@ def transform_train(model_name, iters, plot_after, device, resume):
         batch_size=100,
         max_num_context=MAX_CTX,
         max_seq_len=x_size,
-        min_num_sides=MIN_SIDES,
-        max_num_sides=MIN_SIDES,
+        min_num_sides=MAX_SIDES,
+        max_num_sides=MAX_SIDES,
         center=(5, 5),
         radius=3,
         testing=True,
@@ -119,6 +120,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
         sch.load_state_dict(ckpt["scheduler_state_dict"])
         start = ckpt["iteration"] + 1
         print(f"Resumed from {resume} at iteration {start}")
+        print(f"Current learning rate: {opt.param_groups[0]['lr']}")
 
     train_losses, test_losses, iters_list = [], [], []
 
