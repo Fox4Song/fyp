@@ -711,6 +711,10 @@ class PolygonSentenceReader(nn.Module):
             The type of transformation to apply to the polygon.
             Can be one of 'rotation', 'translation', or 'scaling'.
 
+        next_transformation_type : str
+            The successive type of transformation to apply to the polygon.
+            Can be one of 'rotation', 'translation', or 'scaling'.
+
         eval: bool
             If True, the function will generate a batch of polygons
             with the same transformation type for evaluation.
@@ -962,7 +966,7 @@ class PolygonSentenceReader(nn.Module):
                         and sc_shape.geom_type == "Polygon"
                     ):
                         break
-                true_query_pairs.append((q1, q2))
+                query_poly_list.append((q1, q2))
                 coords = list(sc_shape.exterior.coords)[:-1]
                 query_poly = Polygon(
                     [(x, y) for x, y in coords],
@@ -975,7 +979,7 @@ class PolygonSentenceReader(nn.Module):
                 ty_list.append(q_tgt)
 
                 target_polygons_list.append(query_poly)
-
+            
             total_tokens_list.append(len(q_tgt))
 
             # pad and collect
@@ -988,6 +992,8 @@ class PolygonSentenceReader(nn.Module):
             all_ctx_y.append(ctx_y_pad)
             all_qx.append(qx_pad)
             all_qy.append(qy_pad)
+            true_target_polygons.append(target_polygons_list)
+            true_query_pairs.append(query_poly_list)
 
         # stack
         context_x = torch.stack(all_ctx_x)
@@ -1005,6 +1011,7 @@ class PolygonSentenceReader(nn.Module):
             true_query_pairs,
             self.max_seq_len,
             num_context,
+            num_target,
         )
 
     def generate_masked_polygon_batch(self):
