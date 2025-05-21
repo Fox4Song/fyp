@@ -58,7 +58,9 @@ def get_model_config(model_name, x_size, y_size):
                 "attention_type": "multihead",
                 "n_z_train": 10,
                 "n_z_test": 10,
-                "Encoder": partial(MLP, n_hidden_layers=2, hidden_size=224, is_res=True),
+                "Encoder": partial(
+                    MLP, n_hidden_layers=2, hidden_size=224, is_res=True
+                ),
                 "LatentEncoder": partial(
                     MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=True
                 ),

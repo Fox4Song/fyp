@@ -772,7 +772,11 @@ class PolygonSentenceReader(nn.Module):
                 transformation_type, eval=eval
             )
             if next_transformation_type is not None:
-                next_transformation_type, next_transformation_params = self._sample_random_transformation(next_transformation_type, eval=eval)
+                next_transformation_type, next_transformation_params = (
+                    self._sample_random_transformation(
+                        next_transformation_type, eval=eval
+                    )
+                )
 
             context_x_list, context_y_list = [], []
 
@@ -785,7 +789,9 @@ class PolygonSentenceReader(nn.Module):
                 )
                 if next_transformation_type is not None:
                     transformed_context_poly = self._transform_polygon(
-                        transformed_context_poly, next_transformation_type, next_transformation_params
+                        transformed_context_poly,
+                        next_transformation_type,
+                        next_transformation_params,
                     )
                 transformed_tokens_context = transformed_context_poly.to_tokenised()
                 context_x_list.append(tokens)
@@ -803,7 +809,9 @@ class PolygonSentenceReader(nn.Module):
                 )
                 if next_transformation_type is not None:
                     transformed_poly = self._transform_polygon(
-                        transformed_poly, next_transformation_type, next_transformation_params
+                        transformed_poly,
+                        next_transformation_type,
+                        next_transformation_params,
                     )
                 transformed_target_poly_list.append(transformed_poly)
                 target_tokens = target_poly.to_tokenised()
@@ -979,7 +987,7 @@ class PolygonSentenceReader(nn.Module):
                 ty_list.append(q_tgt)
 
                 target_polygons_list.append(query_poly)
-            
+
             total_tokens_list.append(len(q_tgt))
 
             # pad and collect

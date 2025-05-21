@@ -58,7 +58,9 @@ def get_model_config(model_name, x_size, y_size):
                 "attention_type": "multihead",
                 "n_z_train": 10,
                 "n_z_test": 10,
-                "Encoder": partial(MLP, n_hidden_layers=2, hidden_size=224, is_res=True),
+                "Encoder": partial(
+                    MLP, n_hidden_layers=2, hidden_size=224, is_res=True
+                ),
                 "LatentEncoder": partial(
                     MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=True
                 ),
@@ -123,7 +125,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
 
     train_losses, test_losses, iters_list = [], [], []
 
-    best_val_loss = float('inf')
+    best_val_loss = float("inf")
     epochs_no_improve = 0
     patience = 1e4
 
@@ -195,7 +197,9 @@ def transform_train(model_name, iters, plot_after, device, resume):
             else:
                 epochs_no_improve += 1
                 if epochs_no_improve >= patience:
-                    print(f"No improvement in {patience} validations. Early stopping at iteration {it}.")
+                    print(
+                        f"No improvement in {patience} validations. Early stopping at iteration {it}."
+                    )
                     break
 
     # Save final model and checkpoint
