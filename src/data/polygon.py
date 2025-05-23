@@ -772,11 +772,18 @@ class PolygonSentenceReader(nn.Module):
                 transformation_type, eval=eval
             )
             if next_transformation_type is not None:
-                next_transformation_type, next_transformation_params = (
-                    self._sample_random_transformation(
-                        next_transformation_type, eval=eval
+                if next_transformation_type == "random":
+                    next_transformation_type, next_transformation_params = (
+                        self._sample_random_transformation(
+                            None, eval=eval
+                        )
                     )
-                )
+                else:
+                    next_transformation_type, next_transformation_params = (
+                        self._sample_random_transformation(
+                            next_transformation_type, eval=eval
+                        )
+                    )
 
             context_x_list, context_y_list = [], []
 
