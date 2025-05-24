@@ -14,7 +14,7 @@ import torch.nn as nn
 from torch.distributions.kl import kl_divergence
 
 TRAINING_ITERATIONS = int(1.4e5)
-PLOT_AFTER = int(1e4)
+PLOT_AFTER = int(5e3)
 BATCH_SIZE = 128
 MAX_CONTEXT_POINTS = 10
 MIN_SIDES = 3
@@ -116,6 +116,7 @@ for it in range(start_iter, TRAINING_ITERATIONS + 1):
         true_poly,
         max_seq_len,
         num_context,
+        num_target,
         context_masks,
     ) = polygon_generator_train.generate_polygon_batch_few_shot_completion_task()
 
@@ -152,6 +153,7 @@ for it in range(start_iter, TRAINING_ITERATIONS + 1):
             true_poly_eval,
             max_seq_len_eval,
             num_context_eval,
+            num_target_eval,
             context_masks_eval,
         ) = polygon_generator_test.generate_polygon_batch_few_shot_completion_task()
 
