@@ -18,7 +18,7 @@ from .polygon_metrics import (
 )
 
 
-def plot_polygon(vertices, title=None):
+def plot_polygon(vertices, title=None, save_fig=None):
     """
     Plots a convex polygon using a list of vertex coordinates.
 
@@ -47,7 +47,8 @@ def plot_polygon(vertices, title=None):
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.axis("equal")
-    plt.grid(True)
+    if save_fig:
+        plt.savefig(save_fig)
     plt.show()
 
 
