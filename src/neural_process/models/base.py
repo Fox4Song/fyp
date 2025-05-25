@@ -46,7 +46,7 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
                 MLP,
                 n_hidden_layers=4,
                 hidden_size=self.r_dim,
-                dropout=0.1,
+                dropout=0.2,
                 is_res=False,
             )
         self.decoder = Decoder(self.x_dim + self.r_dim, self.y_dim * 2)
@@ -262,7 +262,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
                 MLP,
                 n_hidden_layers=7,
                 hidden_size=self.z_dim,
-                dropout=0.1,
+                dropout=0.2,
                 is_res=True,
             )
         self.latent_encoder = LatentEncoder(self.r_dim, self.z_dim * 2)

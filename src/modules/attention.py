@@ -65,7 +65,7 @@ class Attention(nn.Module):
         rep="mlp",
         attention_layers=2,
         mask=None,
-        dropout=0,
+        dropout=0.1,
     ):
         super().__init__()
 

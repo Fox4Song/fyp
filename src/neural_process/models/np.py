@@ -34,7 +34,7 @@ class CNP(NeuralProcessFamily):
                 MLP,
                 n_hidden_layers=7,
                 hidden_size=self.r_dim,
-                dropout=0.1,
+                dropout=0.2,
                 is_res=True,
             )
         self.encoder = Encoder(self.x_dim + self.y_dim, self.r_dim)

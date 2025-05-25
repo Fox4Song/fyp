@@ -38,10 +38,10 @@ def get_model_config(model_name, x_size, y_size):
                 "y_dim": y_size,
                 "r_dim": r_size,
                 "Decoder": partial(
-                    MLP, n_hidden_layers=6, hidden_size=r_size, dropout=0.1, is_res=False
+                    MLP, n_hidden_layers=6, hidden_size=r_size, dropout=0.2, is_res=False
                 ),
                 "Encoder": partial(
-                    MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.2, is_res=True
                 ),
             },
             "criterion": NLLLoss(),
@@ -60,13 +60,13 @@ def get_model_config(model_name, x_size, y_size):
                 "n_z_train": 10,
                 "n_z_test": 10,
                 "Encoder": partial(
-                    MLP, n_hidden_layers=2, hidden_size=224, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=2, hidden_size=224, dropout=0.2, is_res=True
                 ),
                 "LatentEncoder": partial(
-                    MLP, n_hidden_layers=4, hidden_size=224, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=4, hidden_size=224, dropout=0.2, is_res=True
                 ),
                 "Decoder": partial(
-                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=False
+                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.2, is_res=False
                 ),
             },
             "criterion": ELBOLoss(),
