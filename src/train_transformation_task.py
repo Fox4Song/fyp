@@ -1,6 +1,7 @@
 import argparse
 import datetime
 from functools import partial
+import matplotlib.pyplot as plt
 import torch
 from torch.distributions.kl import kl_divergence
 import torch.optim as optim
@@ -37,10 +38,10 @@ def get_model_config(model_name, x_size, y_size):
                 "y_dim": y_size,
                 "r_dim": r_size,
                 "Decoder": partial(
-                    MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=6, hidden_size=r_size, dropout=0.1, is_res=False
                 ),
                 "Encoder": partial(
-                    MLP, n_hidden_layers=7, hidden_size=r_size, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.1, is_res=True
                 ),
             },
             "criterion": NLLLoss(),
@@ -59,13 +60,13 @@ def get_model_config(model_name, x_size, y_size):
                 "n_z_train": 10,
                 "n_z_test": 10,
                 "Encoder": partial(
-                    MLP, n_hidden_layers=2, hidden_size=224, is_res=True
+                    MLP, n_hidden_layers=2, hidden_size=224, dropout=0.1, is_res=True
                 ),
                 "LatentEncoder": partial(
-                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=4, hidden_size=224, dropout=0.1, is_res=True
                 ),
                 "Decoder": partial(
-                    MLP, n_hidden_layers=5, hidden_size=224, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=False
                 ),
             },
             "criterion": ELBOLoss(),
@@ -82,6 +83,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
     MAX_SEQ_LEN = 5 + 4 * 12
     x_size = MAX_SEQ_LEN
     y_size = MAX_SEQ_LEN
+    KL_ANNEAL_STEPS = 2e4
 
     cfg = get_model_config(model_name, x_size, y_size)
     BATCH = cfg["batch_size"]
@@ -133,12 +135,15 @@ def transform_train(model_name, iters, plot_after, device, resume):
             t.to(device) for t in (ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask)
         ]
 
+        beta = float(it) / KL_ANNEAL_STEPS
+        beta = max(0.0, min(1.0, beta))  # clamp to [0,1]
+
         opt.zero_grad()
         dist, _, q_zc, q_zct = model(ctx_x, ctx_y, tgt_x, tgt_y)
         if model_name == "cnp":
             loss = cfg["criterion"](dist, tgt_y, mask=ctx_mask)
         else:
-            loss = cfg["criterion"](dist, q_zct, q_zc, tgt_y, mask=ctx_mask)
+            loss = cfg["criterion"](dist, q_zct, q_zc, tgt_y, beta=beta, mask=ctx_mask)
         loss.backward()
         opt.step()
         sch.step()
@@ -146,7 +151,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
 
         if it % 1000 == 0:
             print(
-                f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}, Iteration: {it}, Train Loss: {loss.item():.4f}"
+                f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}, Iteration: {it}, Beta: {beta:.3f} Train Loss: {loss.item():.4f}"
             )
 
         if it % plot_after == 0:
@@ -198,6 +203,17 @@ def transform_train(model_name, iters, plot_after, device, resume):
     torch.save(ck, f"{base}_checkpoint.pt")
     print(f"Saved transformation model and checkpoint at iteration {it}")
 
+    plt.figure(figsize=(8, 5))
+    plt.plot(train_losses, label="Train Loss")
+    plt.plot(iters_list, test_losses, marker='o', label="Test Loss")
+    plt.xlabel("Iteration")
+    plt.ylabel("Loss")
+    plt.title("Train & Test Loss")
+    plt.xticks(list(range(0, len(train_losses)+1, max(1, len(train_losses)//10))))  # optional: sparser x-ticks
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"{base}_loss_plot.png")
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser("Train NP transformation models")

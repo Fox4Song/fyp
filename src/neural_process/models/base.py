@@ -44,10 +44,10 @@ class NeuralProcessFamily(nn.Module, abc.ABC):
         if Decoder is None:
             Decoder = partial(
                 MLP,
-                n_hidden_layers=7,
+                n_hidden_layers=4,
                 hidden_size=self.r_dim,
                 dropout=0.1,
-                is_res=True,
+                is_res=False,
             )
         self.decoder = Decoder(self.x_dim + self.r_dim, self.y_dim * 2)
 
@@ -260,7 +260,7 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
         if LatentEncoder is None:
             LatentEncoder = partial(
                 MLP,
-                n_hidden_layers=6,
+                n_hidden_layers=7,
                 hidden_size=self.z_dim,
                 dropout=0.1,
                 is_res=True,
@@ -376,6 +376,6 @@ class LatentNeuralProcessFamily(NeuralProcessFamily):
 
         # Reshape to r_dim
         # [n_z, batch_size, n_lat, r_dim]
-        R_z_reshaped = F.relu(self.reshape_r_z(R_z))
+        R_z_reshaped = F.leaky_relu(self.reshape_r_z(R_z), negative_slope=0.1)
 
         return R_z_reshaped

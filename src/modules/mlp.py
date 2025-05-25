@@ -39,7 +39,7 @@ class MLP(nn.Module):
         output_size,
         hidden_size=32,
         n_hidden_layers=1,
-        activation=nn.ReLU(),
+        activation=nn.LeakyReLU(0.1),
         is_bias=True,
         dropout=0,
         is_res=False,
@@ -56,27 +56,32 @@ class MLP(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
         self.to_hidden = nn.Linear(self.input_size, self.hidden_size, bias=is_bias)
-        self.linears = nn.ModuleList(
-            [
-                nn.Linear(self.hidden_size, self.hidden_size, bias=is_bias)
-                for _ in range(self.n_hidden_layers - 1)
-            ]
-        )
+        self.ln_in = nn.LayerNorm(self.hidden_size)
+        
+        self.linears = nn.ModuleList()
+        self.lns = nn.ModuleList()
+        for _ in range(self.n_hidden_layers - 1):
+            self.linears.append(nn.Linear(self.hidden_size, self.hidden_size, bias=is_bias))
+            self.lns.append(nn.LayerNorm(self.hidden_size))
+
         self.out = nn.Linear(self.hidden_size, self.output_size, bias=is_bias)
 
         self._reset_parameters()
 
     def _reset_parameters(self):
         # Initialise weights with Kaiming for RELU for now
-        nn.init.kaiming_uniform_(self.to_hidden.weight, nonlinearity="relu")
+        nn.init.kaiming_uniform_(self.to_hidden.weight, nonlinearity="leaky_relu")
         for linear in self.linears:
-            nn.init.kaiming_uniform_(linear.weight, nonlinearity="relu")
-        nn.init.kaiming_normal_(self.out.weight, nonlinearity="relu")
+            nn.init.kaiming_uniform_(linear.weight, nonlinearity="leaky_relu")
+        nn.init.kaiming_normal_(self.out.weight, nonlinearity="linear")
 
     def forward(self, x):
-        x = self.activation(self.to_hidden(x))
-        res = self.dropout(x)
-
+        x = self.to_hidden(x)
+        x = self.ln_in(x)
+        x = self.activation(x)
+        x = self.dropout(x)
+        res = x
+        
         for linear in self.linears:
             x = self.activation(linear(res))
             if self.is_res:

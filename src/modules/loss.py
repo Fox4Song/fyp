@@ -59,7 +59,7 @@ class ELBOLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, p_y_dist, q_zct, q_zc, y_target, mask=None):
+    def forward(self, p_y_dist, q_zct, q_zc, y_target, beta=1, mask=None):
         # L_vi = E[log(p_y_xc)] - kl(p_zct||p_zc)
 
         # [n_z, batch_size, n_targets]
@@ -68,7 +68,7 @@ class ELBOLoss(nn.Module):
         kl_loss = kl_divergence(q_zct, q_zc)
         kl_loss = kl_loss.mean(dim=0).mean()
 
-        return nll_loss + kl_loss
+        return nll_loss + beta * kl_loss
 
 
 class MSELoss(nn.Module):
