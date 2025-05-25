@@ -759,6 +759,7 @@ class PolygonSentenceReader(nn.Module):
         total_tokens_list = []
         true_target_polygons = []
         true_transformed_polygons = []
+        context_masks = []
 
         for _ in range(self.batch_size):
 
@@ -828,17 +829,21 @@ class PolygonSentenceReader(nn.Module):
                 ty = target_trans_tokens
                 tx_list.append(tx)
                 ty_list.append(ty)
+            
+            mask = [1] * len(ty) 
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
             target_x_pad = self._pad_batch(tx_list, self.max_seq_len)
             target_y_pad = self._pad_batch(ty_list, self.max_seq_len)
+            mask_pad = self._pad_batch([mask], self.max_seq_len)
 
             context_x.append(context_x_pad)
             context_y.append(context_y_pad)
             target_x.append(target_x_pad)
             target_y.append(target_y_pad)
+            context_masks.append(mask_pad)
             total_tokens_list.append(total_tokens)
             true_target_polygons.append(target_poly_list)
             true_transformed_polygons.append(transformed_target_poly_list)
@@ -848,12 +853,14 @@ class PolygonSentenceReader(nn.Module):
         context_y = torch.stack(context_y)
         target_x = torch.stack(target_x)  # [B, num_target, max_seq_len]
         target_y = torch.stack(target_y)
+        context_masks = torch.stack(context_masks)  # [B, 1, max_seq_len]
 
         return (
             context_x,
             context_y,
             target_x,
             target_y,
+            context_masks,
             total_tokens_list,
             true_target_polygons,
             true_transformed_polygons,
@@ -912,6 +919,7 @@ class PolygonSentenceReader(nn.Module):
         total_tokens_list = []
         true_target_polygons = []
         true_query_pairs = []  # # list of (Polygon1, Polygon2) for each query
+        context_masks = []
 
         for _ in range(self.batch_size):
 
@@ -997,11 +1005,15 @@ class PolygonSentenceReader(nn.Module):
 
             total_tokens_list.append(len(q_tgt))
 
+            # compute context mask
+            mask = [1] * len(q_tgt)
+
             # pad and collect
             ctx_x_pad = self._pad_batch(ctx_inputs, self.max_seq_len)
             ctx_y_pad = self._pad_batch(ctx_targets, self.max_seq_len)
             qx_pad = self._pad_batch(tx_list, self.max_seq_len)
             qy_pad = self._pad_batch(ty_list, self.max_seq_len)
+            mask_pad = self._pad_batch([mask], self.max_seq_len)
 
             all_ctx_x.append(ctx_x_pad)
             all_ctx_y.append(ctx_y_pad)
@@ -1009,18 +1021,21 @@ class PolygonSentenceReader(nn.Module):
             all_qy.append(qy_pad)
             true_target_polygons.append(target_polygons_list)
             true_query_pairs.append(query_poly_list)
+            context_masks.append(mask_pad)
 
         # stack
         context_x = torch.stack(all_ctx_x)
         context_y = torch.stack(all_ctx_y)
         target_x = torch.stack(all_qx)
         target_y = torch.stack(all_qy)
+        context_masks = torch.stack(context_masks)
 
         return (
             context_x,
             context_y,
             target_x,
             target_y,
+            context_masks,
             total_tokens_list,
             true_target_polygons,
             true_query_pairs,
