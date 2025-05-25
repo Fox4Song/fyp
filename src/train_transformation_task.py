@@ -38,7 +38,7 @@ def get_model_config(model_name, x_size, y_size):
                 "y_dim": y_size,
                 "r_dim": r_size,
                 "Decoder": partial(
-                    MLP, n_hidden_layers=6, hidden_size=r_size, dropout=0.2, is_res=False
+                    MLP, n_hidden_layers=6, hidden_size=r_size, dropout=0.2, is_res=True
                 ),
                 "Encoder": partial(
                     MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.2, is_res=True
