@@ -126,19 +126,19 @@ def transform_train(model_name, iters, plot_after, device, resume):
     train_losses, test_losses, iters_list = [], [], []
 
     for it in range(start, iters + 1):
-        ctx_x, ctx_y, tgt_x, tgt_y, tokens, true_poly, true_poly_t, _, _, _ = (
+        ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask, *_ = (
             train_gen.generate_polygon_batch_few_shot_transformation_task()
         )
-        ctx_x, ctx_y, tgt_x, tgt_y = [
-            t.to(device) for t in (ctx_x, ctx_y, tgt_x, tgt_y)
+        ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask = [
+            t.to(device) for t in (ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask)
         ]
 
         opt.zero_grad()
         dist, _, q_zc, q_zct = model(ctx_x, ctx_y, tgt_x, tgt_y)
         if model_name == "cnp":
-            loss = cfg["criterion"](dist, tgt_y)
+            loss = cfg["criterion"](dist, tgt_y, mask=ctx_mask)
         else:
-            loss = cfg["criterion"](dist, q_zct, q_zc, tgt_y)
+            loss = cfg["criterion"](dist, q_zct, q_zc, tgt_y, mask=ctx_mask)
         loss.backward()
         opt.step()
         sch.step()
@@ -150,16 +150,16 @@ def transform_train(model_name, iters, plot_after, device, resume):
             )
 
         if it % plot_after == 0:
-            cx, cy, tx, ty, tok_e, tp, tp_t, _, _, _ = (
+            cx, cy, tx, ty, cx_mask, tok_e, tp, tp_t, *_ = (
                 test_gen.generate_polygon_batch_few_shot_transformation_task()
             )
-            cx, cy, tx, ty = [t.to(device) for t in (cx, cy, tx, ty)]
+            cx, cy, tx, ty, cx_mask = [t.to(device) for t in (cx, cy, tx, ty, cx_mask)]
 
             td, _, qzc, qzct = model(cx, cy, tx, ty)
             if model_name == "cnp":
-                t_loss = cfg["criterion"](td, ty)
+                t_loss = cfg["criterion"](td, ty, mask=cx_mask)
             else:
-                t_loss = cfg["criterion"](td, qzct, qzc, ty)
+                t_loss = cfg["criterion"](td, qzct, qzc, ty, mask=cx_mask)
             test_losses.append(t_loss.item())
             iters_list.append(it)
 
