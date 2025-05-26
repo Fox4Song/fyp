@@ -37,10 +37,10 @@ def get_model_config(model_name, x_size, y_size):
                 "y_dim": y_size,
                 "r_dim": r_size,
                 "Decoder": partial(
-                    MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=6, hidden_size=r_size, dropout=0.2, is_res=True
                 ),
                 "Encoder": partial(
-                    MLP, n_hidden_layers=7, hidden_size=r_size, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=8, hidden_size=r_size, dropout=0.2, is_res=True
                 ),
             },
             "criterion": NLLLoss(),
@@ -59,13 +59,13 @@ def get_model_config(model_name, x_size, y_size):
                 "n_z_train": 10,
                 "n_z_test": 10,
                 "Encoder": partial(
-                    MLP, n_hidden_layers=2, hidden_size=224, is_res=True
+                    MLP, n_hidden_layers=2, hidden_size=224, dropout=0.2, is_res=True
                 ),
                 "LatentEncoder": partial(
-                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=4, hidden_size=224, dropout=0.2, is_res=True
                 ),
                 "Decoder": partial(
-                    MLP, n_hidden_layers=5, hidden_size=224, dropout=0.1, is_res=True
+                    MLP, n_hidden_layers=3, hidden_size=224, dropout=0.2, is_res=False
                 ),
             },
             "criterion": ELBOLoss(),
@@ -80,6 +80,7 @@ def get_model_config(model_name, x_size, y_size):
 def transform_train(model_name, iters, plot_after, device, resume):
     MIN_SIDES, MAX_SIDES = 3, 5
     MAX_SEQ_LEN = 5 + 4 * MAX_SIDES
+    KL_ANNEAL_STEPS = 2e4
     x_size = 2 * MAX_SEQ_LEN
     y_size = 2 * MAX_SEQ_LEN
 
@@ -125,24 +126,23 @@ def transform_train(model_name, iters, plot_after, device, resume):
 
     train_losses, test_losses, iters_list = [], [], []
 
-    best_val_loss = float("inf")
-    epochs_no_improve = 0
-    patience = 1e4
-
     for it in range(start, iters + 1):
-        ctx_x, ctx_y, tgt_x, tgt_y, tokens, true_poly, query_pair, _, _, _ = (
+        ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask, *_ = (
             train_gen.generate_polygon_batch_few_shot_composition_task()
         )
-        ctx_x, ctx_y, tgt_x, tgt_y = [
-            t.to(device) for t in (ctx_x, ctx_y, tgt_x, tgt_y)
+        ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask = [
+            t.to(device) for t in (ctx_x, ctx_y, tgt_x, tgt_y, ctx_mask)
         ]
+
+        beta = float(it) / KL_ANNEAL_STEPS
+        beta = max(0.0, min(1.0, beta))  # clamp to [0,1]
 
         opt.zero_grad()
         dist, _, q_zc, q_zct = model(ctx_x, ctx_y, tgt_x, tgt_y)
         if model_name == "cnp":
-            loss = cfg["criterion"](dist, tgt_y)
+            loss = cfg["criterion"](dist, tgt_y, mask=ctx_mask)
         else:
-            loss = cfg["criterion"](dist, q_zct, q_zc, tgt_y)
+            loss = cfg["criterion"](dist, q_zct, q_zc, tgt_y, beta=beta, mask=ctx_mask)
         loss.backward()
         opt.step()
         sch.step()
@@ -154,16 +154,16 @@ def transform_train(model_name, iters, plot_after, device, resume):
             )
 
         if it % plot_after == 0:
-            cx, cy, tx, ty, tok_e, tp, q_pair, _, _, _ = (
+            cx, cy, tx, ty, cx_mask, tok_e, tp, *_ = (
                 test_gen.generate_polygon_batch_few_shot_composition_task()
             )
-            cx, cy, tx, ty = [t.to(device) for t in (cx, cy, tx, ty)]
+            cx, cy, tx, ty, cx_mask = [t.to(device) for t in (cx, cy, tx, ty, cx_mask)]
 
             td, _, qzc, qzct = model(cx, cy, tx, ty)
             if model_name == "cnp":
-                t_loss = cfg["criterion"](td, ty)
+                t_loss = cfg["criterion"](td, ty, mask=cx_mask)
             else:
-                t_loss = cfg["criterion"](td, qzct, qzc, ty)
+                t_loss = cfg["criterion"](td, qzct, qzc, ty, mask=cx_mask)
             test_losses.append(t_loss.item())
             iters_list.append(it)
 
@@ -189,18 +189,6 @@ def transform_train(model_name, iters, plot_after, device, resume):
             #     plot_polygon(predicted.vertices, title="Predicted Transformed Polygon")
             # except:
             #     print("Invalid polygon shape")
-
-            val_loss = t_loss.item()
-            if val_loss < best_val_loss - 1e-6:
-                best_val_loss = t_loss.item()
-                epochs_no_improve = 0
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= patience:
-                    print(
-                        f"No improvement in {patience} validations. Early stopping at iteration {it}."
-                    )
-                    break
 
     # Save final model and checkpoint
     base = f"models/polygon/np/composition_task/{cfg['model_cls'].__name__}"
