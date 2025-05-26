@@ -572,7 +572,7 @@ class PolygonSentenceReader(nn.Module):
             context_masks,
         )
 
-    def generate_polygon_batch_few_shot_completion_task(self, num_context=None):
+    def generate_polygon_batch_few_shot_completion_task(self, num_context=None, num_pred_angles=None):
         """
         Gnerates a batch of Polygons for Few-Shot Completion Tasks
 
@@ -624,6 +624,10 @@ class PolygonSentenceReader(nn.Module):
             # Choose a fixed number of sides for this sample
             n = random.randint(self.min_num_sides, self.max_num_sides)
 
+            if num_pred_angles is None:
+                num_pred_angles = random.randint(1, n)
+            num_query_angles = n - num_pred_angles
+
             context_x_list, context_y_list = [], []
 
             for _ in range(num_context):
@@ -632,10 +636,10 @@ class PolygonSentenceReader(nn.Module):
                 tokens_list.append(tokens)
 
                 # Split tokens into context_x and context_y
-                # - context_x contains the polygon sequence up to and including <SEP_ANG>
-                # - context_y contains the polygon sequence representing the angles
-                cx = tokens[: 4 + 3 * n]
-                cy = tokens[4 + 3 * n : -1]
+                # - context_x contains the polygon sequence up to and including <SEP_ANG> and (len_angles - num_pred_angles) angles 
+                # - context_y contains the polygon sequence representing num_pred_angles angles
+                cx = tokens[: 4 + 3 * n + num_query_angles]
+                cy = tokens[4 + 3 * n + num_query_angles: -1]
 
                 context_x_list.append(cx)
                 context_y_list.append(cy)
@@ -649,8 +653,8 @@ class PolygonSentenceReader(nn.Module):
                 target_poly_list.append(target_poly)
                 target_tokens = target_poly.to_tokenised()
                 total_tokens = len(target_tokens)
-                tx = target_tokens[: 4 + 3 * n]
-                ty = target_tokens[4 + 3 * n : -1]
+                tx = target_tokens[: 4 + 3 * n + num_query_angles]
+                ty = target_tokens[4 + 3 * n + num_query_angles: -1]
                 tx_list.append(tx)
                 ty_list.append(ty)
 
@@ -658,7 +662,9 @@ class PolygonSentenceReader(nn.Module):
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
-            y_size = (self.max_seq_len - 4) // 3
+            # x_size = 3 + 4 * max_sides
+            # y_size = max_sides
+            y_size = (self.max_seq_len - 3) // 4
             context_y_pad = self._pad_batch(context_y_list, y_size)
             target_x_pad = self._pad_batch(tx_list, self.max_seq_len)
             target_y_pad = self._pad_batch(ty_list, y_size)
