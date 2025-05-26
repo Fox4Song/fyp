@@ -775,9 +775,7 @@ class PolygonSentenceReader(nn.Module):
             if next_transformation_type is not None:
                 if next_transformation_type == "random":
                     next_transformation_type, next_transformation_params = (
-                        self._sample_random_transformation(
-                            None, eval=eval
-                        )
+                        self._sample_random_transformation(None, eval=eval)
                     )
                 else:
                     next_transformation_type, next_transformation_params = (
@@ -829,8 +827,8 @@ class PolygonSentenceReader(nn.Module):
                 ty = target_trans_tokens
                 tx_list.append(tx)
                 ty_list.append(ty)
-            
-            mask = [1] * len(ty) 
+
+            mask = [1] * len(ty)
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)

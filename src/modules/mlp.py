@@ -57,11 +57,13 @@ class MLP(nn.Module):
 
         self.to_hidden = nn.Linear(self.input_size, self.hidden_size, bias=is_bias)
         self.ln_in = nn.LayerNorm(self.hidden_size)
-        
+
         self.linears = nn.ModuleList()
         self.lns = nn.ModuleList()
         for _ in range(self.n_hidden_layers - 1):
-            self.linears.append(nn.Linear(self.hidden_size, self.hidden_size, bias=is_bias))
+            self.linears.append(
+                nn.Linear(self.hidden_size, self.hidden_size, bias=is_bias)
+            )
             self.lns.append(nn.LayerNorm(self.hidden_size))
 
         self.out = nn.Linear(self.hidden_size, self.output_size, bias=is_bias)
@@ -81,7 +83,7 @@ class MLP(nn.Module):
         x = self.activation(x)
         x = self.dropout(x)
         res = x
-        
+
         for linear in self.linears:
             x = self.activation(linear(res))
             if self.is_res:

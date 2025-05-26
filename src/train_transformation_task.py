@@ -205,15 +205,18 @@ def transform_train(model_name, iters, plot_after, device, resume):
 
     plt.figure(figsize=(8, 5))
     plt.plot(train_losses, label="Train Loss")
-    plt.plot(iters_list, test_losses, marker='o', label="Test Loss")
+    plt.plot(iters_list, test_losses, marker="o", label="Test Loss")
     plt.xlabel("Iteration")
     plt.ylabel("Loss")
     plt.title("Train & Test Loss")
-    plt.xticks(list(range(0, len(train_losses)+1, max(1, len(train_losses)//10))))  # optional: sparser x-ticks
+    plt.xticks(
+        list(range(0, len(train_losses) + 1, max(1, len(train_losses) // 10)))
+    )  # optional: sparser x-ticks
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(f"{base}_loss_plot.png")
+
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser("Train NP transformation models")
