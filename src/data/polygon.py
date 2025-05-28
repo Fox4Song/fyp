@@ -1254,3 +1254,123 @@ class PolygonSentenceReader(nn.Module):
 
         return input_batch, label_batch, attention_mask_batch
         
+    def generate_causal_polygon_batch_few_shot_masked_completion_task(
+        self, num_context=None, mask_cfg=None
+    ):
+        """
+        Gnerates a batch of Polygons for explicit Few-Shot Masked Completion Tasks
+        in a next-token (causal) language modeling way.
+
+        Given a number of context example [x1,y1,x2,y2,...,xn,yn] and a target,
+        predict each next token in the sequence.
+
+        Returns
+        -------
+        input_batch : torch.Tensor [B, max_seq_len]
+            Batch of input token sequences (each shifted right by one from label_seq).
+
+        label_batch : torch.Tensor [B, max_seq_len]
+            Batch of target token sequences (the “next” token at each position).
+
+        attention_mask_batch : torch.Tensor [B, max_seq_len]
+            Binary mask (1 for real tokens in input_seq, 0 for padding).
+        """
+
+        if num_context is None:
+            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+
+        input_sequences = []
+        label_sequences = []
+        attention_masks = []
+        target_masks = []
+
+        for _ in range(self.batch_size):
+
+            tokens_list = []
+
+            # Choose a fixed number of sides for this sample
+            n = random.randint(self.min_num_sides, self.max_num_sides)
+
+            # Generate the target polygon and its tokenised form.
+            target_poly = self.generate_polygon(n)
+            target_tokens = target_poly.to_tokenised()
+            total_tokens = len(target_tokens)
+
+            # For testing, use a deterministic mask (e.g., mask only angles)
+            if self.testing and mask_cfg is not None:
+                num_target = 1
+                if mask_cfg["type"] == "angle":
+                    mask = (
+                        [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
+                    )
+                elif mask_cfg["type"] == "length":
+                    mask = (
+                        [0] * (3 + 2 * n) + [1] * n + [0] * (total_tokens - (3 + 3 * n))
+                    )
+                elif mask_cfg["type"] == "vertex":
+                    mask = [0] * 2 + [1] * (2 * n) + [0] * (total_tokens - (2 + 2 * n))
+                else:
+                    mask = [1] * total_tokens
+                if "p" in mask_cfg:
+                    p = mask_cfg["p"]
+                    one_positions = [i for i, v in enumerate(mask) if v == 1]
+                    num_to_keep = int(len(one_positions) * p)
+                    keep_positions = set(random.sample(one_positions, num_to_keep))
+                    mask = [
+                        1 if i in keep_positions else 0 for i in range(total_tokens)
+                    ]
+            else:
+                # Mask 15%
+                mask = self._generate_random_mask(total_tokens, 0.15)
+                mask = mask.tolist()
+
+            paragraph_tokens = []
+
+            for _ in range(num_context):
+                poly = self.generate_polygon(n)
+                tokens = poly.to_tokenised()
+                tokens_list.append(tokens)
+                cx = [MASK_TOKEN if m == 1 else t for t, m in zip(tokens, mask)]
+                paragraph_tokens.extend(cx)
+                paragraph_tokens.extend(tokens)
+
+            tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
+            paragraph_tokens.extend(tx)
+            context_query_len = len(paragraph_tokens)
+            paragraph_tokens.extend(target_tokens)
+            target_mask = [0] * context_query_len + [1] * len(target_tokens)
+            assert len(paragraph_tokens) == len(target_mask)
+
+            # Enforce length = max_seq_len + 1 via truncation or padding
+            total_len = self.max_seq_len + 1
+            if len(paragraph_tokens) >= total_len:
+                seq = paragraph_tokens[:total_len]
+                target_mask = target_mask[:total_len]
+            else:
+                pad_len = total_len - len(paragraph_tokens)
+                seq = paragraph_tokens + [0.0] * pad_len  # assume 0.0 is pad token
+                target_mask = target_mask + [0] * pad_len
+
+            # Split into input / label
+            input_seq = seq[:-1]  # length = max_seq_len
+            label_seq = seq[1:]  # length = max_seq_len
+
+            target_mask = target_mask[1:]  # length = max_seq_len
+
+            # Attention mask for padding in input_seq
+            attention_mask = [1 if tok != 0.0 else 0 for tok in input_seq]
+
+            # Collect as tensors
+            input_sequences.append(torch.tensor(input_seq, dtype=torch.float))
+            label_sequences.append(torch.tensor(label_seq, dtype=torch.float))
+            attention_masks.append(torch.tensor(attention_mask, dtype=torch.float))
+            target_masks.append(torch.tensor(target_mask, dtype=torch.float))
+
+        # Stack into [B, max_seq_len]
+        input_batch = torch.stack(input_sequences)
+        label_batch = torch.stack(label_sequences)
+        attention_mask_batch = torch.stack(attention_masks)
+        target_mask_batch = torch.stack(target_masks)
+
+        return input_batch, label_batch, attention_mask_batch, target_mask_batch
+    
