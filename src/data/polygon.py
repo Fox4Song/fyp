@@ -572,7 +572,9 @@ class PolygonSentenceReader(nn.Module):
             context_masks,
         )
 
-    def generate_polygon_batch_few_shot_completion_task(self, num_context=None, num_pred_angles=None):
+    def generate_polygon_batch_few_shot_completion_task(
+        self, num_context=None, num_pred_angles=None
+    ):
         """
         Gnerates a batch of Polygons for Few-Shot Completion Tasks
 
@@ -637,10 +639,10 @@ class PolygonSentenceReader(nn.Module):
                 tokens_list.append(tokens)
 
                 # Split tokens into context_x and context_y
-                # - context_x contains the polygon sequence up to and including <SEP_ANG> and (len_angles - num_pred_angles) angles 
+                # - context_x contains the polygon sequence up to and including <SEP_ANG> and (len_angles - num_pred_angles) angles
                 # - context_y contains the polygon sequence representing num_pred_angles angles
                 cx = tokens[: 4 + 3 * n + num_query_angles]
-                cy = tokens[4 + 3 * n + num_query_angles: -1]
+                cy = tokens[4 + 3 * n + num_query_angles : -1]
 
                 context_x_list.append(cx)
                 context_y_list.append(cy)
@@ -655,7 +657,7 @@ class PolygonSentenceReader(nn.Module):
                 target_tokens = target_poly.to_tokenised()
                 total_tokens = len(target_tokens)
                 tx = target_tokens[: 4 + 3 * n + num_query_angles]
-                ty = target_tokens[4 + 3 * n + num_query_angles: -1]
+                ty = target_tokens[4 + 3 * n + num_query_angles : -1]
                 tx_list.append(tx)
                 ty_list.append(ty)
 
@@ -1182,7 +1184,7 @@ class PolygonSentenceReader(nn.Module):
     def generate_causal_transformation_polygon_batch(self, mixing_ratio=0.05):
         """
         Generates a batch of token sequences for next-token (causal) language modeling,
-        injecting transformation sentence (original→transformed) randomly interleaved within 
+        injecting transformation sentence (original→transformed) randomly interleaved within
         each paragraph with the given mixing ratio.
 
         Returns
@@ -1203,7 +1205,7 @@ class PolygonSentenceReader(nn.Module):
 
         for _ in range(self.batch_size):
             # Determine if inject transformation sentence
-            inject = (random.random() < mixing_ratio)
+            inject = random.random() < mixing_ratio
             # Build a long token list by concatenating several polygons + EOS
             target_len = random.randint(256, self.max_seq_len + 1)
             sentences = []
@@ -1213,7 +1215,7 @@ class PolygonSentenceReader(nn.Module):
                 tokens = poly.to_tokenised()
                 sentences.append(tokens)
                 sentence_len += len(tokens)
-            
+
             if inject:
                 orig = self.generate_polygon()
                 trans = self._transform_polygon(orig)
@@ -1221,7 +1223,7 @@ class PolygonSentenceReader(nn.Module):
                 trans = trans.to_tokenised()
                 pos = random.randint(0, len(sentences))
                 sentences.insert(pos, orig)
-                sentences.insert(pos+1, trans)
+                sentences.insert(pos + 1, trans)
 
             paragraph_tokens = []
             for s in sentences:
@@ -1253,7 +1255,7 @@ class PolygonSentenceReader(nn.Module):
         attention_mask_batch = torch.stack(attention_masks)
 
         return input_batch, label_batch, attention_mask_batch
-        
+
     def generate_causal_polygon_batch_few_shot_masked_completion_task(
         self, num_context=None, mask_cfg=None
     ):
@@ -1373,4 +1375,3 @@ class PolygonSentenceReader(nn.Module):
         target_mask_batch = torch.stack(target_masks)
 
         return input_batch, label_batch, attention_mask_batch, target_mask_batch
-    
