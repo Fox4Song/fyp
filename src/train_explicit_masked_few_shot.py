@@ -89,7 +89,7 @@ for it in range(TRAINING_ITERATIONS + 1):
 
     # 6) compute masked MSE loss (ignore padding positions)
     #    we weight squared error by attention_mask (1. on real tokens, 0. on pad)
-    loss = criterion(preds, label_batch, attention_mask_batch, mask=target_mask_batch)
+    loss = criterion(preds, label_batch, target_mask_batch)
     running_loss += loss.item()
 
     # 7) backward + step
@@ -106,7 +106,7 @@ for it in range(TRAINING_ITERATIONS + 1):
         )
         running_loss = 0.0
 
-final_checkpoint_path = f"final_tf_trans_model_{total_params}_params.pt"
+final_checkpoint_path = f"final_tf_mask_model_{total_params}_params.pt"
 torch.save(
     {
         "iteration": TRAINING_ITERATIONS,
