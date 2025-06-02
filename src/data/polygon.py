@@ -229,6 +229,7 @@ class PolygonSentenceReader(nn.Module):
         max_seq_len,
         min_num_sides,
         max_num_sides,
+        exclude_sides=[6,7,11,12],
         center=(5, 5),
         radius=3,
         testing=False,
@@ -239,6 +240,7 @@ class PolygonSentenceReader(nn.Module):
         self.max_seq_len = max_seq_len
         self.min_num_sides = min_num_sides
         self.max_num_sides = max_num_sides
+        self.exclude_sides = exclude_sides
         self.center = center
         self.radius = radius
         self.testing = testing
@@ -405,8 +407,8 @@ class PolygonSentenceReader(nn.Module):
             }
         elif t_type == "translation":
             params = {
-                "dx": random.uniform(-4, 4) if eval else random.uniform(-2, 2),
-                "dy": random.uniform(-4, 4) if eval else random.uniform(-2, 2),
+                "dx": random.uniform(2, 4) if eval else random.uniform(-2, 2),
+                "dy": random.uniform(2, 4) if eval else random.uniform(-2, 2),
             }
         else:
             raise ValueError("Unknown Transformation Type")
@@ -510,7 +512,12 @@ class PolygonSentenceReader(nn.Module):
         """
         # Randomly choose the number of sides within the specified range.
         if n is None:
-            n = random.randint(self.min_num_sides, self.max_num_sides)
+            allowed = [
+                i
+                for i in range(self.min_num_sides, self.max_num_sides + 1)
+                if i not in self.exclude_sides
+            ]
+            n = random.choice(allowed)
         vertices = self._generate_random_convex_polygon(n)
         lengths = self._compute_side_lengths(vertices)
         angles = self._compute_interior_angles(vertices)
@@ -571,7 +578,12 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            n = random.randint(self.min_num_sides, self.max_num_sides)
+            allowed = [
+                i
+                for i in range(self.min_num_sides, self.max_num_sides + 1)
+                if i not in self.exclude_sides
+            ]
+            n = random.choice(allowed)
 
             # Generate the target polygon and its tokenised form.
             target_poly = self.generate_polygon(n)
@@ -714,7 +726,12 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            n = random.randint(self.min_num_sides, self.max_num_sides)
+            allowed = [
+                i
+                for i in range(self.min_num_sides, self.max_num_sides + 1)
+                if i not in self.exclude_sides
+            ]
+            n = random.choice(allowed)
 
             if num_pred_angles is None:
                 num_query_angles = n - random.randint(1, n)
@@ -865,7 +882,12 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            n = random.randint(self.min_num_sides, self.max_num_sides)
+            allowed = [
+                i
+                for i in range(self.min_num_sides, self.max_num_sides + 1)
+                if i not in self.exclude_sides
+            ]
+            n = random.choice(allowed)
 
             # Sample random transformation
             transformation_type, params = self._sample_random_transformation(
@@ -1384,7 +1406,12 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            n = random.randint(self.min_num_sides, self.max_num_sides)
+            allowed = [
+                i
+                for i in range(self.min_num_sides, self.max_num_sides + 1)
+                if i not in self.exclude_sides
+            ]
+            n = random.choice(allowed)
 
             # Generate the target polygon and its tokenised form.
             target_poly = self.generate_polygon(n)
@@ -1507,7 +1534,12 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            n = random.randint(self.min_num_sides, self.max_num_sides)
+            allowed = [
+                i
+                for i in range(self.min_num_sides, self.max_num_sides + 1)
+                if i not in self.exclude_sides
+            ]
+            n = random.choice(allowed)
 
             if num_pred_angles is None:
                 num_query_angles = n - random.randint(1, n)
