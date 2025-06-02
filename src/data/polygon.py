@@ -498,7 +498,7 @@ class PolygonSentenceReader(nn.Module):
 
         new_lengths = self._compute_side_lengths(new_vertices)
         new_angles = self._compute_interior_angles(new_vertices)
-        transformed_polygon = Polygon(new_vertices, new_lengths, new_angles)
+        transformed_polygon = Polygon(new_vertices, new_lengths, new_angles, self.center, self.radius, self.max_num_sides)
         return transformed_polygon
 
     def generate_polygon(self, n=None):
