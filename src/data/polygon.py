@@ -28,7 +28,7 @@ class Polygon:
         Class method that creates a Polygon instance from a tokenised flat list.
     """
 
-    def __init__(self, vertices, lengths, angles, center, radius, max_num_sides=12):
+    def __init__(self, vertices, lengths, angles, center, radius, max_num_sides):
         self._n = len(vertices)
         self._vertices = vertices
         self._lengths = lengths
@@ -59,11 +59,12 @@ class Polygon:
         """
         return float(self.n) / float(self._max_num_sides)
 
-    def _unnormalise_n(self, n):
+    @staticmethod
+    def _unnormalise_n(n, max_num_sides):
         """
         Converts a normalised value back to the original number of sides.
         """
-        return int(n * self._max_num_sides)
+        return int(n * max_num_sides)
     
     def _normalise_vertices(self):
         """
@@ -77,13 +78,14 @@ class Polygon:
         r = self._radius
 
         normalised = []
-        for (x, y) in self.vertices:
+        for x, y in self.vertices:
             x_norm = (x - cx) / (2.0 * r) + 0.5
             y_norm = (y - cy) / (2.0 * r) + 0.5
-            normalised.extend([x_norm, y_norm])
+            normalised.extend((x_norm, y_norm))
         return normalised
 
-    def _unnormalise_vertices(self, vertices_norm, center, radius):
+    @staticmethod
+    def _unnormalise_vertices(vertices_norm, center, radius):
         """
         Invert: x_norm = (x - cx) / (2r) + 0.5  →  x = (x_norm - 0.5) * 2r + cx,
                y_norm = (y - cy) / (2r) + 0.5  →  y = (y_norm - 0.5) * 2r + cy.
@@ -91,7 +93,6 @@ class Polygon:
         vertices_norm is a flat list [x1_norm, y1_norm, x2_norm, y2_norm, ..., xn_norm, yn_norm].
         Returns a list of vertex tuples [(x1, y1), (x2, y2), ...].
         """
-
         cx, cy = center
         coords = []
         for i in range(0, len(vertices_norm), 2):
@@ -111,7 +112,8 @@ class Polygon:
         diameter = 2.0 * self._radius
         return [L / diameter for L in self.lengths]
     
-    def _unnormalise_lengths(self, lengths_norm, radius):
+    @staticmethod
+    def _unnormalise_lengths(lengths_norm, radius):
         """
         Invert: L_norm = L_raw / (2r)  →  L_raw = L_norm * (2r).
         lengths_norm is a list [L1_norm, L2_norm, …, Ln_norm].
@@ -127,7 +129,8 @@ class Polygon:
         """
         return [angle / 180.0 for angle in self.angles]
     
-    def _unnormalise_angles(self, angles_norm):
+    @staticmethod
+    def _unnormalise_angles(angles_norm):
         """
         Invert: A_norm = A_raw / 180  →  A_raw = A_norm * 180.
         angles_norm is a list [A1_norm, A2_norm, …, An_norm].
@@ -146,8 +149,8 @@ class Polygon:
         """
         tokenised = []
         tokenised.append(self._normalise_n())
-        for x, y in self._normalise_vertices():
-            tokenised.extend([x, y])
+        tokenised.append(SEP_VERTS)
+        tokenised.extend(self._normalise_vertices())
         tokenised.append(SEP_LENS)
         tokenised.extend(self._normalise_lengths())
         tokenised.append(SEP_ANGS)
@@ -156,7 +159,7 @@ class Polygon:
         return tokenised
 
     @classmethod
-    def from_tokenised(cls, tokenised, n, center, radius):
+    def from_tokenised(cls, tokenised, n, center, radius, max_num_sides):
         """
         Creates a Polygon instance from a tokenised flat list.
 
@@ -176,10 +179,10 @@ class Polygon:
         vertices_flat = tokenised[2 : 2 + 2 * n]
         vertices = cls._unnormalise_vertices(vertices_flat, center, radius)
         lengths = tokenised[3 + 2 * n : 3 + 3 * n]
-        lengths = cls._unnormalize_lengths(lengths, radius)
+        lengths = cls._unnormalise_lengths(lengths, radius)
         angles = tokenised[4 + 3 * n : -1]
         angles = cls._unnormalise_angles(angles)
-        return cls(vertices, lengths, angles)
+        return cls(vertices, lengths, angles, center, radius, max_num_sides)
 
     def __repr__(self):
         return "Polygon(n=%d, vertices=%s, lengths=%s, angles=%s)" % (
@@ -512,7 +515,7 @@ class PolygonSentenceReader(nn.Module):
         lengths = self._compute_side_lengths(vertices)
         angles = self._compute_interior_angles(vertices)
 
-        return Polygon(vertices, lengths, angles)
+        return Polygon(vertices, lengths, angles, self.center, self.radius, self.max_num_sides)
 
     def generate_polygon_batch_few_shot_masked_completion_task(
         self, num_context=None, mask_cfg=None
