@@ -17,8 +17,8 @@ PLOT_AFTER = int(5e3)
 BATCH_SIZE = 128
 MAX_CONTEXT_POINTS = 15
 MIN_SIDES = 3
-MAX_SIDES = 8
-x_size = 4 + 3 * 12
+MAX_SIDES = 12
+x_size = 4 + 3 * MAX_SIDES
 y_size = 12
 torch.manual_seed(0)
 
@@ -41,7 +41,7 @@ polygon_generator_test = PolygonSentenceReader(
     batch_size=100,
     max_num_context=MAX_CONTEXT_POINTS,
     max_seq_len=x_size,
-    min_num_sides=MAX_SIDES,
+    min_num_sides=MIN_SIDES,
     max_num_sides=MAX_SIDES,
     center=(5, 5),
     radius=3,

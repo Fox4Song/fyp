@@ -79,8 +79,8 @@ def get_model_config(model_name, x_size, y_size):
 
 
 def transform_train(model_name, iters, plot_after, device, resume):
-    MIN_SIDES, MAX_SIDES = 3, 8
-    MAX_SEQ_LEN = 3 + 4 * 12
+    MIN_SIDES, MAX_SIDES = 3, 12
+    MAX_SEQ_LEN = 3 + 4 * MAX_SIDES
     x_size = MAX_SEQ_LEN
     y_size = 12
     KL_ANNEAL_STEPS = 2e4
@@ -103,7 +103,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
         batch_size=100,
         max_num_context=MAX_CTX,
         max_seq_len=x_size,
-        min_num_sides=MAX_SIDES,
+        min_num_sides=MIN_SIDES,
         max_num_sides=MAX_SIDES,
         center=(5, 5),
         radius=3,

@@ -19,7 +19,7 @@ MIN_LR = 1e-6
 
 max_seq_len = 512
 min_num_sides = 3
-max_num_sides = 8
+max_num_sides = 12
 max_num_context = 10  # dummy for reader
 
 criterion = MSELoss()
