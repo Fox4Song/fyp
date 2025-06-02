@@ -229,7 +229,7 @@ class PolygonSentenceReader(nn.Module):
         max_seq_len,
         min_num_sides,
         max_num_sides,
-        exclude_sides=[6,7,11,12],
+        exclude_sides=[6, 7, 11, 12],
         center=(5, 5),
         radius=3,
         testing=False,
