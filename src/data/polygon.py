@@ -52,7 +52,7 @@ class Polygon:
     @property
     def angles(self):
         return self._angles
-    
+
     def _normalise_n(self):
         """
         Returns n / max_num_sides, so that n ∈ [1, max_num_sides] maps into [0,1].
@@ -65,7 +65,7 @@ class Polygon:
         Converts a normalised value back to the original number of sides.
         """
         return int(n * max_num_sides)
-    
+
     def _normalise_vertices(self):
         """
         For each (x,y) ∈ [cₓ - r, cₓ + r] x [cᵧ - r, cᵧ + r],
@@ -111,7 +111,7 @@ class Polygon:
         """
         diameter = 2.0 * self._radius
         return [L / diameter for L in self.lengths]
-    
+
     @staticmethod
     def _unnormalise_lengths(lengths_norm, radius):
         """
@@ -121,14 +121,14 @@ class Polygon:
         """
         diameter = 2.0 * radius
         return [L_norm * diameter for L_norm in lengths_norm]
-    
+
     def _normalise_angles(self):
         """
         Each interior angle A_i ∈ (0, 180). We divide by 180 to map it into (0,1].
         Returns a list [A1/180, A2/180, ...].
         """
         return [angle / 180.0 for angle in self.angles]
-    
+
     @staticmethod
     def _unnormalise_angles(angles_norm):
         """
@@ -137,7 +137,7 @@ class Polygon:
         Returns [A1_raw, A2_raw, …, An_raw].
         """
         return [A_norm * 180.0 for A_norm in angles_norm]
-    
+
     def to_tokenised(self):
         """
         Converts the polygon into a tokenised flat list.
@@ -515,7 +515,9 @@ class PolygonSentenceReader(nn.Module):
         lengths = self._compute_side_lengths(vertices)
         angles = self._compute_interior_angles(vertices)
 
-        return Polygon(vertices, lengths, angles, self.center, self.radius, self.max_num_sides)
+        return Polygon(
+            vertices, lengths, angles, self.center, self.radius, self.max_num_sides
+        )
 
     def generate_polygon_batch_few_shot_masked_completion_task(
         self, num_context=None, mask_cfg=None
