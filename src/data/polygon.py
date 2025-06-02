@@ -28,11 +28,14 @@ class Polygon:
         Class method that creates a Polygon instance from a tokenised flat list.
     """
 
-    def __init__(self, vertices, lengths, angles):
+    def __init__(self, vertices, lengths, angles, center, radius, max_num_sides=12):
         self._n = len(vertices)
         self._vertices = vertices
         self._lengths = lengths
         self._angles = angles
+        self._center = center
+        self._radius = radius
+        self._max_num_sides = max_num_sides
 
     @property
     def n(self):
@@ -49,7 +52,89 @@ class Polygon:
     @property
     def angles(self):
         return self._angles
+    
+    def _normalise_n(self):
+        """
+        Returns n / max_num_sides, so that n ∈ [1, max_num_sides] maps into [0,1].
+        """
+        return float(self.n) / float(self._max_num_sides)
 
+    def _unnormalise_n(self, n):
+        """
+        Converts a normalised value back to the original number of sides.
+        """
+        return int(n * self._max_num_sides)
+    
+    def _normalise_vertices(self):
+        """
+        For each (x,y) ∈ [cₓ - r, cₓ + r] x [cᵧ - r, cᵧ + r],
+        map it into [0,1]x[0,1] by:
+            x_norm = (x - (cₓ - r)) / (2r)  = (x - cₓ) / (2r) + 0.5
+            y_norm = (y - (cᵧ - r)) / (2r)  = (y - cᵧ) / (2r) + 0.5
+        Returns a flat list: [x1_norm, y1_norm, x2_norm, y2_norm, ...].
+        """
+        cx, cy = self._center
+        r = self._radius
+
+        normalised = []
+        for (x, y) in self.vertices:
+            x_norm = (x - cx) / (2.0 * r) + 0.5
+            y_norm = (y - cy) / (2.0 * r) + 0.5
+            normalised.extend([x_norm, y_norm])
+        return normalised
+
+    def _unnormalise_vertices(self, vertices_norm, center, radius):
+        """
+        Invert: x_norm = (x - cx) / (2r) + 0.5  →  x = (x_norm - 0.5) * 2r + cx,
+               y_norm = (y - cy) / (2r) + 0.5  →  y = (y_norm - 0.5) * 2r + cy.
+
+        vertices_norm is a flat list [x1_norm, y1_norm, x2_norm, y2_norm, ..., xn_norm, yn_norm].
+        Returns a list of vertex tuples [(x1, y1), (x2, y2), ...].
+        """
+
+        cx, cy = center
+        coords = []
+        for i in range(0, len(vertices_norm), 2):
+            x_norm = vertices_norm[i]
+            y_norm = vertices_norm[i + 1]
+            # invert the mapping
+            x_raw = (x_norm - 0.5) * (2.0 * radius) + cx
+            y_raw = (y_norm - 0.5) * (2.0 * radius) + cy
+            coords.append((x_raw, y_raw))
+        return coords
+
+    def _normalise_lengths(self):
+        """
+        Each side-length L_i is at most 2⋅radius. We divide by (2⋅radius)
+        so that all lengths lie in (0,1]. Returns a list [L1/(2r), L2/(2r), ...].
+        """
+        diameter = 2.0 * self._radius
+        return [L / diameter for L in self.lengths]
+    
+    def _unnormalise_lengths(self, lengths_norm, radius):
+        """
+        Invert: L_norm = L_raw / (2r)  →  L_raw = L_norm * (2r).
+        lengths_norm is a list [L1_norm, L2_norm, …, Ln_norm].
+        Returns [L1_raw, L2_raw, ..., Ln_raw].
+        """
+        diameter = 2.0 * radius
+        return [L_norm * diameter for L_norm in lengths_norm]
+    
+    def _normalise_angles(self):
+        """
+        Each interior angle A_i ∈ (0, 180). We divide by 180 to map it into (0,1].
+        Returns a list [A1/180, A2/180, ...].
+        """
+        return [angle / 180.0 for angle in self.angles]
+    
+    def _unnormalise_angles(self, angles_norm):
+        """
+        Invert: A_norm = A_raw / 180  →  A_raw = A_norm * 180.
+        angles_norm is a list [A1_norm, A2_norm, …, An_norm].
+        Returns [A1_raw, A2_raw, …, An_raw].
+        """
+        return [A_norm * 180.0 for A_norm in angles_norm]
+    
     def to_tokenised(self):
         """
         Converts the polygon into a tokenised flat list.
@@ -59,18 +144,19 @@ class Polygon:
         list
             The tokenised representation of the polygon.
         """
-        tokenised = [self.n, SEP_VERTS]
-        for x, y in self.vertices:
+        tokenised = []
+        tokenised.append(self._normalise_n())
+        for x, y in self._normalise_vertices():
             tokenised.extend([x, y])
         tokenised.append(SEP_LENS)
-        tokenised.extend(self.lengths)
+        tokenised.extend(self._normalise_lengths())
         tokenised.append(SEP_ANGS)
-        tokenised.extend(self.angles)
+        tokenised.extend(self._normalise_angles())
         tokenised.append(EOS_TOKEN)
         return tokenised
 
     @classmethod
-    def from_tokenised(cls, tokenised, n):
+    def from_tokenised(cls, tokenised, n, center, radius):
         """
         Creates a Polygon instance from a tokenised flat list.
 
@@ -88,12 +174,11 @@ class Polygon:
             A new instance of Polygon constructed from the tokenised data.
         """
         vertices_flat = tokenised[2 : 2 + 2 * n]
-        vertices = [
-            (vertices_flat[i], vertices_flat[i + 1])
-            for i in range(0, len(vertices_flat), 2)
-        ]
+        vertices = cls._unnormalise_vertices(vertices_flat, center, radius)
         lengths = tokenised[3 + 2 * n : 3 + 3 * n]
+        lengths = cls._unnormalize_lengths(lengths, radius)
         angles = tokenised[4 + 3 * n : -1]
+        angles = cls._unnormalise_angles(angles)
         return cls(vertices, lengths, angles)
 
     def __repr__(self):
