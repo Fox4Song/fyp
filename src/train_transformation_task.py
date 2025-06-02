@@ -174,7 +174,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
             # Reconstruct predicted transformed polygon
             tok_orig = true_orig.to_tokenised()
             predicted = Polygon.from_tokenised(
-                pred[: len(tok_orig)].tolist(), tok_orig[0]
+                pred[: len(tok_orig)].tolist(), true_orig.n, center=(5, 5), radius=3, max_num_sides=MAX_SIDES
             )
 
             print(
