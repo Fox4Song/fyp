@@ -527,7 +527,7 @@ class PolygonSentenceReader(nn.Module):
         )
 
     def generate_polygon_batch_few_shot_masked_completion_task(
-        self, num_context=None, mask_cfg=None
+        self, num_context=None, n=None, mask_cfg=None
     ):
         """
         Gnerates a batch of Polygons for Few-Shot Masked Completion Tasks
@@ -578,12 +578,13 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            allowed = [
-                i
-                for i in range(self.min_num_sides, self.max_num_sides + 1)
-                if i not in self.exclude_sides
-            ]
-            n = random.choice(allowed)
+            if n is None:
+                allowed = [
+                    i
+                    for i in range(self.min_num_sides, self.max_num_sides + 1)
+                    if i not in self.exclude_sides
+                ]
+                n = random.choice(allowed)
 
             # Generate the target polygon and its tokenised form.
             target_poly = self.generate_polygon(n)
@@ -595,7 +596,7 @@ class PolygonSentenceReader(nn.Module):
                 num_target = 1
                 if mask_cfg["type"] == "angle":
                     mask = (
-                        [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n - 1)) + [0]
+                        [0] * (4 + 3 * n) + [1] * (total_tokens - (4 + 3 * n + 1)) + [0]
                     )
                 elif mask_cfg["type"] == "length":
                     mask = (
@@ -675,7 +676,7 @@ class PolygonSentenceReader(nn.Module):
         )
 
     def generate_polygon_batch_few_shot_completion_task(
-        self, num_context=None, num_pred_angles=None
+        self, num_context=None, n=None, num_pred_angles=None
     ):
         """
         Gnerates a batch of Polygons for Few-Shot Completion Tasks
@@ -726,12 +727,13 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            allowed = [
-                i
-                for i in range(self.min_num_sides, self.max_num_sides + 1)
-                if i not in self.exclude_sides
-            ]
-            n = random.choice(allowed)
+            if n is None:
+                allowed = [
+                    i
+                    for i in range(self.min_num_sides, self.max_num_sides + 1)
+                    if i not in self.exclude_sides
+                ]
+                n = random.choice(allowed)
 
             if num_pred_angles is None:
                 num_query_angles = n - random.randint(1, n)
@@ -811,6 +813,7 @@ class PolygonSentenceReader(nn.Module):
     def generate_polygon_batch_few_shot_transformation_task(
         self,
         num_context=None,
+        n=None,
         transformation_type=None,
         next_transformation_type=None,
         eval=False,
@@ -882,12 +885,13 @@ class PolygonSentenceReader(nn.Module):
             tokens_list = []
 
             # Choose a fixed number of sides for this sample
-            allowed = [
-                i
-                for i in range(self.min_num_sides, self.max_num_sides + 1)
-                if i not in self.exclude_sides
-            ]
-            n = random.choice(allowed)
+            if n is None:
+                allowed = [
+                    i
+                    for i in range(self.min_num_sides, self.max_num_sides + 1)
+                    if i not in self.exclude_sides
+                ]
+                n = random.choice(allowed)
 
             # Sample random transformation
             transformation_type, params = self._sample_random_transformation(
@@ -989,7 +993,7 @@ class PolygonSentenceReader(nn.Module):
         )
 
     def generate_polygon_batch_few_shot_composition_task(
-        self, num_context=None, operation_type=None
+        self, num_context=None, n=None, operation_type=None
     ):
         """
         Few-shot composition tasks with resampling on invalid compositions:
@@ -1047,8 +1051,8 @@ class PolygonSentenceReader(nn.Module):
             for _ in range(num_context):
                 # resample until valid composition
                 while True:
-                    p1 = self.generate_polygon()
-                    p2 = self.generate_polygon()
+                    p1 = self.generate_polygon(n)
+                    p2 = self.generate_polygon(n)
                     sp1 = ShapelyPolygon(p1.vertices)
                     sp2 = ShapelyPolygon(p2.vertices)
                     if not sp1.is_valid or not sp2.is_valid:
@@ -1087,8 +1091,8 @@ class PolygonSentenceReader(nn.Module):
 
                 # Target set
                 while True:
-                    q1 = self.generate_polygon()
-                    q2 = self.generate_polygon()
+                    q1 = self.generate_polygon(n)
+                    q2 = self.generate_polygon(n)
                     sp1 = ShapelyPolygon(q1.vertices)
                     sp2 = ShapelyPolygon(q2.vertices)
                     if not sp1.is_valid or not sp2.is_valid:
