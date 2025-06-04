@@ -28,7 +28,7 @@ class Polygon:
         Class method that creates a Polygon instance from a tokenised flat list.
     """
 
-    def __init__(self, vertices, lengths, angles, center, radius, max_num_sides):
+    def __init__(self, vertices, lengths, angles, center=(5,5), radius=3, max_num_sides=12):
         self._n = len(vertices)
         self._vertices = vertices
         self._lengths = lengths
@@ -498,7 +498,7 @@ class PolygonSentenceReader(nn.Module):
 
         new_lengths = self._compute_side_lengths(new_vertices)
         new_angles = self._compute_interior_angles(new_vertices)
-        transformed_polygon = Polygon(new_vertices, new_lengths, new_angles, self.center, self.radius, self.max_num_sides)
+        transformed_polygon = Polygon(new_vertices, new_lengths, new_angles)
         return transformed_polygon
 
     def generate_polygon(self, n=None):
@@ -523,7 +523,7 @@ class PolygonSentenceReader(nn.Module):
         angles = self._compute_interior_angles(vertices)
 
         return Polygon(
-            vertices, lengths, angles, self.center, self.radius, self.max_num_sides
+            vertices, lengths, angles
         )
 
     def generate_polygon_batch_few_shot_masked_completion_task(
