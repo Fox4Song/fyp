@@ -170,10 +170,12 @@ def transform_train(model_name, iters, plot_after, device, resume):
             iters_list.append(it)
 
             pred = td.mean.mean(0)[0, -1]
-            true_angles = ty[0, -1].tolist()
+            true_angles = ty[0, -1] * 180.0
+            true_angles = true_angles.tolist()
             while true_angles and true_angles[-1] == 0.0:
                 true_angles.pop()
-            pred_angles = pred[: len(true_angles)].tolist()
+            pred_angles = pred[: len(true_angles)] * 180.0
+            pred_angles = pred_angles.tolist()
 
             print(f"Iteration {it}:")
             print("Test loss: ", t_loss.item())
