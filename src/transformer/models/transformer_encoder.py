@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -30,7 +32,7 @@ class TransformerEncoder(nn.Module):
     """
 
     def __init__(
-        self, x_dim, y_dim, r_dim=128, encoder_layers=2, encoder_heads=8, **kwargs
+        self, x_dim, y_dim, r_dim=256, encoder_layers=2, encoder_heads=8, dropout=0.1, **kwargs
     ):
         super().__init__()
 
@@ -45,9 +47,11 @@ class TransformerEncoder(nn.Module):
             d_model=r_dim,
             nhead=encoder_heads,
             dim_feedforward=r_dim * 4,
-            dropout=0,
+            dropout=dropout,
             batch_first=True,
+            **kwargs,
         )
+        
         self.encoder = nn.TransformerEncoder(
             encoder_layer=encoder_layer, num_layers=encoder_layers
         )
@@ -57,10 +61,9 @@ class TransformerEncoder(nn.Module):
         self.apply(self._reset_parameters)
 
     def _reset_parameters(self, module):
-        if isinstance(module, nn.Linear):
-            torch.nn.init.xavier_normal_(module.weight)
-            if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
 
     def forward(self, x, labels=None, mlm_mask=None, attention_mask=None):
         """
@@ -87,7 +90,7 @@ class TransformerEncoder(nn.Module):
         if x.dim() == 2:
             x = x.unsqueeze(-1)
 
-        x = self.project_r(x)
+        x = self.project_r(x) * math.sqrt(self.r_dim)
         x = self.pos_encoder(x)
         x = self.encoder(x, src_key_padding_mask=(attention_mask == 0))
         logits = self.out(x).squeeze(-1)
@@ -98,21 +101,3 @@ class TransformerEncoder(nn.Module):
             return {"loss": loss, "logits": logits}
 
         return {"logits": logits}
-
-    # def forward(self, x_context, y_context, x_target):
-    #     n_x_target = x_target.size(1)
-
-    #     # [batch_size, 2 * n_context + x_target, x_dim]
-    #     x = torch.cat([x_context, y_context, x_target], dim=1)
-
-    #     # [batch_size, 2 * n_context + n_target, x_dim]
-    #     R_c = self.project_r(x)
-    #     R_c = self.pos_encoder(R_c)
-
-    #     # [batch_size, 2 * n_context + n_target, x_dim]
-    #     R = self.encoder(R_c)
-
-    #     # [batch_size, n_target, y_dim]
-    #     out = self.out(R[:, -n_x_target:, :])
-
-    #     return out
