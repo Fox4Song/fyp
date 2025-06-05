@@ -627,8 +627,7 @@ class PolygonSentenceReader(nn.Module):
                 tokens_list.append(tokens)
                 cx = [MASK_TOKEN if m == 1 else t for t, m in zip(tokens, mask)]
                 context_x_list.append(cx)
-                cy = [t for t, m in zip(tokens, mask) if m == 1]
-                context_y_list.append(cy)
+                context_y_list.append(tokens)
 
             tx_list, ty_list = context_x_list.copy(), context_y_list.copy()
             target_poly_list = []
@@ -639,17 +638,14 @@ class PolygonSentenceReader(nn.Module):
                 target_tokens = target_poly.to_tokenised()
                 tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
                 tx_list.append(tx)
-                ty = [t for t, m in zip(target_tokens, mask) if m == 1]
-                ty_list.append(ty)
-
-            context_mask = [1] * len(ty)
+                ty_list.append(target_tokens)
 
             # Pad each list into a tensor.
             context_x_pad = self._pad_batch(context_x_list, self.max_seq_len)
             context_y_pad = self._pad_batch(context_y_list, self.max_seq_len)
             target_x_pad = self._pad_batch(tx_list, self.max_seq_len)
             target_y_pad = self._pad_batch(ty_list, self.max_seq_len)
-            context_mask = self._pad_batch([context_mask], self.max_seq_len)
+            context_mask = self._pad_batch([mask], self.max_seq_len)
 
             context_x.append(context_x_pad)
             context_y.append(context_y_pad)
