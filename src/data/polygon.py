@@ -1463,8 +1463,10 @@ class PolygonSentenceReader(nn.Module):
             tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
             paragraph_tokens.extend(tx)
             context_query_len = len(paragraph_tokens)
-            paragraph_tokens.extend(target_tokens)
-            target_mask = [0] * context_query_len + [1] * len(target_tokens)
+            ty = [t for t, m in zip(target_tokens, mask) if m == 1]
+            paragraph_tokens.extend(ty)
+            paragraph_tokens.append(EOS_TOKEN)
+            target_mask = [0] * context_query_len + [1] * len(ty) + [0]
             assert len(paragraph_tokens) == len(target_mask)
 
             # Enforce length = max_seq_len + 1 via truncation or padding
