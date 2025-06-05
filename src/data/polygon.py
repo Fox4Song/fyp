@@ -1458,7 +1458,9 @@ class PolygonSentenceReader(nn.Module):
                 tokens_list.append(tokens)
                 cx = [MASK_TOKEN if m == 1 else t for t, m in zip(tokens, mask)]
                 paragraph_tokens.extend(cx)
-                paragraph_tokens.extend(tokens)
+                cy = [t for t, m in zip(tokens, mask) if m == 1]
+                paragraph_tokens.extend(cy)
+                paragraph_tokens.append(EOS_TOKEN)
 
             tx = [MASK_TOKEN if m == 1 else t for t, m in zip(target_tokens, mask)]
             paragraph_tokens.extend(tx)
