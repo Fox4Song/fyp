@@ -72,12 +72,10 @@ for it in range(TRAINING_ITERATIONS + 1):
     # 2) move to device
     input_batch = input_batch.to(device)  # [B, L]
     label_batch = label_batch.to(device)  # [B, L]
-    mlm_mask_batch     = mlm_mask_batch.to(device) # [B, L]
+    mlm_mask_batch = mlm_mask_batch.to(device) # [B, L]
     attention_mask_batch = attention_mask_batch.to(device)  # [B, L]
 
-    # 3) reshape for PyTorch Transformer: [seq_len, batch, x_dim]
-    #    here x_dim=1 so we unsqueeze a feature dim
-    src = input_batch.unsqueeze(-1).permute(1, 0, 2)  # [L, B, 1]
+    src = input_batch.unsqueeze(-1)  # [B, L, x_dim]
 
     optimizer.zero_grad()
     # 4) forward pass through decoder-only stack

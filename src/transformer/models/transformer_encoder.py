@@ -51,16 +51,16 @@ class TransformerEncoder(nn.Module):
             batch_first=True,
             **kwargs,
         )
-        
+
         self.encoder = nn.TransformerEncoder(
             encoder_layer=encoder_layer, num_layers=encoder_layers
         )
 
         self.out = nn.Linear(r_dim, y_dim)
 
-        self.apply(self._reset_parameters)
+        self._reset_parameters()
 
-    def _reset_parameters(self, module):
+    def _reset_parameters(self):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
