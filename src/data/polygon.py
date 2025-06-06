@@ -1398,7 +1398,7 @@ class PolygonSentenceReader(nn.Module):
         """
 
         if num_context is None:
-            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+            num_context = torch.randint(low=1, high=self.max_num_context + 1, size=(1,))
 
         input_sequences = []
         label_sequences = []
@@ -1530,7 +1530,7 @@ class PolygonSentenceReader(nn.Module):
         """
 
         if num_context is None:
-            num_context = torch.randint(low=3, high=self.max_num_context + 1, size=(1,))
+            num_context = torch.randint(low=1, high=self.max_num_context + 1, size=(1,))
 
         input_sequences = []
         label_sequences = []
