@@ -524,7 +524,7 @@ class PolygonSentenceReader(nn.Module):
         lengths = self._compute_side_lengths(vertices)
         angles = self._compute_interior_angles(vertices)
 
-        return Polygon(vertices, lengths, angles)
+        return Polygon(vertices, lengths, angles, max_num_sides=self.max_num_sides)
 
     def generate_polygon_batch_few_shot_masked_completion_task(
         self, num_context=None, n=None, mask_cfg=None
@@ -1078,6 +1078,7 @@ class PolygonSentenceReader(nn.Module):
                     [(x, y) for x, y in coords],
                     self._compute_side_lengths(coords),
                     self._compute_interior_angles(coords),
+                    max_num_sides=self.max_num_sides,
                 )
                 inp_tokens = p1.to_tokenised() + p2.to_tokenised()
                 tgt_tokens = comp_poly.to_tokenised()
@@ -1118,6 +1119,7 @@ class PolygonSentenceReader(nn.Module):
                     [(x, y) for x, y in coords],
                     self._compute_side_lengths(coords),
                     self._compute_interior_angles(coords),
+                    max_num_sides=self.max_num_sides,
                 )
                 q_inp = q1.to_tokenised() + q2.to_tokenised()
                 q_tgt = query_poly.to_tokenised()

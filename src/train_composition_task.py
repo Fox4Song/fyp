@@ -177,7 +177,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
             # Reconstruct predicted composed polygon
             true_target = true_target.to_tokenised()
             predicted = Polygon.from_tokenised(
-                pred[: len(true_target)].tolist(), true_target[0]
+                pred[: len(true_target)].tolist(), true_target[0], center=(5, 5), radius=3, max_num_sides=MAX_SIDES
             )
 
             print("True Polygon Composition: ", true_target)
