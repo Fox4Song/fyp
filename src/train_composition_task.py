@@ -102,7 +102,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
         batch_size=100,
         max_num_context=MAX_CTX,
         max_seq_len=x_size,
-        min_num_sides=MAX_SIDES,
+        min_num_sides=MIN_SIDES,
         max_num_sides=MAX_SIDES,
         center=(5, 5),
         radius=3,
@@ -176,9 +176,7 @@ def transform_train(model_name, iters, plot_after, device, resume):
 
             # Reconstruct predicted composed polygon
             true_target = true_target.to_tokenised()
-            predicted = Polygon.from_tokenised(
-                pred[: len(true_target)].tolist(), true_target[0], center=(5, 5), radius=3, max_num_sides=MAX_SIDES
-            )
+            predicted = pred[: len(true_target)].tolist()
 
             print("True Polygon Composition: ", true_target)
             print("Predicted Polygon Composition: ", predicted)
